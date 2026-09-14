@@ -1,0 +1,6 @@
+
+	i32	mut total_2 { 9 }
+
+ total_2:=total_2-2
+	exit total_2
+
