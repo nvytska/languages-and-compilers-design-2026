@@ -26,3 +26,18 @@ GitHub rejected the review request because vovaskochko is not a collaborator.
 Automatic approval review blocked a collaborator invitation pending explicit
 user authorization. No invitation was sent. The public repository is readable
 without an invitation. The pull request remains open and unmerged.
+
+Task 2 — local implementation and verification:
+The user requested Task 2 and required approval before adding GitHub comments
+or other text. Codex replaced the old regex source parser with a token-only
+line parser and llvmlite.ir code generation. It added mandatory initialisers,
+const/mut enforcement, declaration-before-use checks, duplicate declarations,
+exit constants and variables, extra-token checks, final-exit enforcement, and
+positioned syntax errors. It added 7 valid and 18 invalid fixture programs with
+expected output files, plus end-to-end compilation tests. It installed llvmlite
+0.49.0 in the project .venv. All 7 unittest methods pass; valid LLVM modules
+verify and compile/run using clang, and the assignment example prints 70.
+Invalid programs were tested both with absent output files and with existing
+output files to verify that failed compilation does not write output.
+README run instructions were updated locally. No Task 2 changes or PR text
+have been published; the proposed publication is awaiting user approval.
