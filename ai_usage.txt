@@ -18,3 +18,11 @@ practice-2 branch, and moved compiler.py and tests/ to the repository root.
 
 Task 2 token-based parsing and semantic checks have not been implemented.
 This log summarizes the conversation; it is not a verbatim transcript.
+
+Repository publication:
+The recovered baseline and Task 1 commits were pushed to GitHub. Codex opened
+https://github.com/nvytska/languages-and-compilers-design-2026/pull/1 into main.
+GitHub rejected the review request because vovaskochko is not a collaborator.
+Automatic approval review blocked a collaborator invitation pending explicit
+user authorization. No invitation was sent. The public repository is readable
+without an invitation. The pull request remains open and unmerged.
