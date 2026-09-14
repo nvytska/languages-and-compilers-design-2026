@@ -1,0 +1,20 @@
+AI usage log — Practice 2
+Date: 2026-09-14
+Assistant: OpenAI Codex
+
+The user asked for Task 1, asked to keep the lexer in compiler.py, requested a
+requirements check, and then requested the repository requirements.
+
+Codex read the assignment PDF and the existing local code. It completed the
+hand-written byte state machine, added unclosed-brace checks, positioned number
+errors at the first byte of the token, and added a --tokens command. It moved the
+lexer into compiler.py, wrote lexer tests and run instructions, and checked the
+worked example and lexical-error command output. All five unittest methods pass.
+
+For repository setup, Codex recovered the retained earlier compiler as a Practice
+1 baseline (the practice-1 files were empty), restored missing LLVM integer type
+definitions, preserved the published README-only initial commit, created the
+practice-2 branch, and moved compiler.py and tests/ to the repository root.
+
+Task 2 token-based parsing and semantic checks have not been implemented.
+This log summarizes the conversation; it is not a verbatim transcript.

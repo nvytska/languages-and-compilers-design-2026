@@ -1,6 +1,226 @@
 import sys
 import re
 
+"""Hand-written ASCII byte lexer for Practice 2, Task 1."""
+
+class Token:
+    def __init__(self, kind, text, line, column):
+        self.kind = kind
+        self.text = text
+        self.line = line
+        self.column = column
+
+    def __repr__(self):
+        return (
+            f"Token(kind={self.kind!r}, "
+            f"text={self.text!r}, "
+            f"line={self.line}, "
+            f"column={self.column})"
+        )
+
+
+class CompileError(ValueError):
+    """A lexical error carrying the source position in its message."""
+
+
+KEYWORDS = {
+    "i32": "keyword",
+    "mut": "keyword",
+    "exit": "keyword",
+}
+
+def is_alpha(b):
+    return (
+        ord("a") <= b <= ord("z")
+        or ord("A") <= b <= ord("Z")
+        or b == ord("_")
+    )
+
+
+def is_digit(b):
+    return ord("0") <= b <= ord("9")
+def lex(data: bytes):
+    lines = []
+    tokens = []
+
+    state = "START"
+
+    start = 0
+    token_line = 1
+    token_col = 1
+
+    line = 1
+    col = 1
+
+    open_braces = []
+    i = 0
+
+    while i <= len(data):
+        b = data[i] if i < len(data) else None
+
+        if state == "START":
+            if b is None:
+                if open_braces:
+                    brace = open_braces[0]
+                    raise CompileError(
+                        f"line {brace.line}:{brace.column}: "
+                        "'{' is not closed before the end of the line"
+                    )
+                break
+
+            elif b in (32, 9):  # space, tab
+                pass
+
+            elif b == 10:  # newline
+                if open_braces:
+                    brace = open_braces[0]
+                    raise CompileError(
+                        f"line {brace.line}:{brace.column}: "
+                        "'{' is not closed before the end of the line"
+                    )
+                tokens.append(
+                    Token("endline", "\\n", line, col)
+                )
+
+                lines.append(tokens)
+                tokens = []
+
+                line += 1
+                col = 0
+
+            elif is_alpha(b):
+                state = "IDENT"
+                start = i
+                token_line = line
+                token_col = col
+
+            elif is_digit(b):
+                state = "NUMBER"
+                start = i
+                token_line = line
+                token_col = col
+
+            elif b == ord("{"):
+                brace = Token("lbrace", "{", line, col)
+                tokens.append(brace)
+                open_braces.append(brace)
+
+            elif b == ord("}"):
+                if open_braces:
+                    open_braces.pop()
+                tokens.append(
+                    Token("rbrace", "}", line, col)
+                )
+
+            elif b == ord("+"):
+                tokens.append(
+                    Token("operator", "+", line, col)
+                )
+
+            elif b == ord("-"):
+                tokens.append(
+                    Token("operator", "-", line, col)
+                )
+
+            elif b == ord("*"):
+                tokens.append(
+                    Token("operator", "*", line, col)
+                )
+
+            elif b == ord(":"):
+                state = "COLON"
+                token_line = line
+                token_col = col
+
+            else:
+                char = chr(b) if b < 128 else f"0x{b:02x}"
+
+                raise CompileError(
+                    f"line {line}:{col}: "
+                    f"unexpected byte '{char}'"
+                )
+
+        elif state == "IDENT":
+            if (
+                b is not None
+                and (is_alpha(b) or is_digit(b))
+            ):
+                pass
+
+            else:
+                word = data[start:i].decode("ascii")
+
+                kind = KEYWORDS.get(
+                    word,
+                    "identifier"
+                )
+
+                tokens.append(
+                    Token(
+                        kind,
+                        word,
+                        token_line,
+                        token_col
+                    )
+                )
+
+                state = "START"
+                continue
+
+        elif state == "NUMBER":
+            if b is not None and is_digit(b):
+                pass
+
+            elif b is not None and is_alpha(b):
+                raise CompileError(
+                    f"line {token_line}:{token_col}: "
+                    "letter inside number"
+                )
+
+            else:
+                number = data[start:i].decode("ascii")
+
+                tokens.append(
+                    Token(
+                        "number",
+                        number,
+                        token_line,
+                        token_col
+                    )
+                )
+
+                state = "START"
+                continue
+
+        elif state == "COLON":
+            if b == ord("="):
+                tokens.append(
+                    Token(
+                        "operator",
+                        ":=",
+                        token_line,
+                        token_col
+                    )
+                )
+
+                state = "START"
+
+            else:
+                raise CompileError(
+                    f"line {token_line}:{token_col}: "
+                    "':' must be followed by '='"
+                )
+
+        i += 1
+        col += 1
+
+    if tokens:
+        lines.append(tokens)
+
+    return lines
+
+
+
 def compilation_error(line_number, message):
     print(
         f"compilation error: line {line_number}: {message}",
@@ -10,6 +230,19 @@ def compilation_error(line_number, message):
 
 
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--tokens":
+        from pathlib import Path
+
+        try:
+            token_lines = lex(Path(sys.argv[2]).read_bytes())
+        except CompileError as error:
+            print(f"compilation error: {error}", file=sys.stderr)
+            sys.exit(1)
+        for token_line in token_lines:
+            for token in token_line:
+                print(token)
+        return
+
     from llvmlite import ir
     import llvmlite.binding as llvm
 
