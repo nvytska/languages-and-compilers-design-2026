@@ -1,7 +1,7 @@
 # Languages and Compilers Design 2026
 
-The compiler and tests live at the repository root. Each practice uses its own
-branch and a pull request into `main`; Practice 2 uses `practice-2`.
+The compiler and tests live at the repository root. Practice 3 adds a grammar,
+recursive-descent parser, abstract syntax tree, and tree-based code generation.
 
 ## Setup
 
@@ -46,18 +46,30 @@ Print the lexer worked example (also works without installing llvmlite):
 python3 compiler.py --tokens tests/lexer-example.txt
 ```
 
+Print an AST without generating LLVM IR:
+
+```sh
+python3 compiler.py --ast tests/valid/worked-example.txt
+python3 compiler.py --ast tests/valid/precedence.txt
+```
+
+The language grammar is in `grammar.ebnf`. The Task 4 example is
+`tests/valid/task4-example.txt` and prints `Program exit with result 120`.
+
 ## Language
 
 - `i32 x{5}` declares a constant; `i32 mut y{10}` declares a mutable variable.
-- Initialisers and assignment values are a constant, a declared variable, or one
-  operation (`+`, `-`, `*`) on two operands. Numbers are unsigned decimal tokens
+- Initialisers and assignment values are chains of constants and variables
+  joined by `+`, `-`, and `*`. Multiplication binds tighter; operators of equal
+  precedence associate left to right. Numbers are unsigned decimal tokens
   in the range 0 through 2147483647; subtraction can produce negative results.
 - `y := x + 3` assigns only to a mutable variable.
 - `exit y` or `exit 42` prints the value and ends the program.
 - One statement per line; spaces, tabs, and blank lines are allowed.
 
 The lexer scans ASCII bytes through explicit states. The parser consumes only
-its tokens, and all LLVM IR is generated through `llvmlite.ir` builder calls.
+its tokens and builds an AST before code generation. All LLVM IR is generated
+through `llvmlite.ir` builder calls.
 Errors print one line to stderr with a 1-based byte line and column and return a
 nonzero status. Failed compilation does not create or overwrite the output file.
 
@@ -67,10 +79,10 @@ nonzero status. Failed compilation does not create or overwrite the output file.
 python3 -m unittest discover -s tests -v
 ```
 
-There are 7 valid programs and 18 invalid programs in `tests/valid/` and
-`tests/invalid/`. Each has a neighbouring `.expected` file. The tests verify LLVM
-IR, run valid programs through lli or clang, compare exact error messages, and
-check output-file preservation. Lexer tests check token kinds and positions.
+Each program in `tests/valid/` and `tests/invalid/` has a neighbouring
+`.expected` file. The tests verify LLVM IR, run valid programs through lli or
+clang, compare exact error messages and AST dumps, and check output-file
+preservation. Lexer tests check token kinds and positions.
 
 ## History and submission
 

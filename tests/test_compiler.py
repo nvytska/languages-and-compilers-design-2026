@@ -15,6 +15,16 @@ class CompilerTests(unittest.TestCase):
         return subprocess.run([sys.executable, str(ROOT / 'compiler.py'), str(source), str(output)],
                               capture_output=True, text=True)
 
+    def test_ast_dumps(self):
+        for source in sorted((ROOT / 'tests/valid').glob('*.ast')):
+            with self.subTest(program=source.stem):
+                result = subprocess.run(
+                    [sys.executable, str(ROOT / 'compiler.py'), '--ast',
+                     str(source.with_suffix('.txt'))],
+                    capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, source.read_text())
+
     def test_valid_programs_compile_verify_and_run(self):
         runner = shutil.which('lli') or shutil.which('clang')
         self.assertIsNotNone(runner, 'Install lli or clang to run the valid programs')
