@@ -5,4 +5,6 @@ Codex implemented the Practice 3 compiler logic on local practice-3 branch.
 
 First fetch and pull the latest changes from the repository. implement a hand-written recursive-descent parser that builds an AST; add `--ast` to print it; generate LLVM IR by walking the AST; and support expression chains with `*` taking precedence over `+` and `-`, with left associativity. Preserve the Practice 2 behavior and add valid and invalid tests with expected outputs. Run the full test suite and verify that the Task 4 example prints `Program exit with result 120`. Keep all changes on `practice-3`. Do not commit or push anything without my approval.
 
+Also Codex generated README explanations for everything.
+
 Link: https://chatgpt.com/share/6ab18365-84fc-83eb-b4eb-44cd3048267a
