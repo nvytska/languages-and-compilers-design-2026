@@ -1,10 +1,134 @@
-AI usage log — Practice 3
+AI Usage — Practice 4
 
-Codex implemented the Practice 3 compiler logic on local practice-3 branch.
+Tool used:
+ChatGPT (OpenAI)
+https://chatgpt.com/share/6abab1b2-8bd4-83ed-b86e-af593ca7bf74
 
+How AI was used:
+I used ChatGPT as a step-by-step programming assistant while extending my Practice 3 compiler for Practice 4. I provided the Practice 4 assignment and my existing compiler.py implementation. We worked through the requirements incrementally, testing each change before continuing.
 
-First fetch and pull the latest changes from the repository. implement a hand-written recursive-descent parser that builds an AST; add `--ast` to print it; generate LLVM IR by walking the AST; and support expression chains with `*` taking precedence over `+` and `-`, with left associativity. Preserve the Practice 2 behavior and add valid and invalid tests with expected outputs. Run the full test suite and verify that the Task 4 example prints `Program exit with result 120`. Keep all changes on `practice-3`. Do not commit or push anything without my approval.
+Main prompts / requests:
+- Asked ChatGPT to work through Practice 4 step by step.
+- Provided my existing Practice 3 compiler.py and asked how to adapt it to the new requirements.
+- Shared terminal outputs after each implementation step so ChatGPT could check whether the behavior matched the assignment.
+- Asked ChatGPT to help construct the required valid and invalid test cases.
 
-Also Codex generated README explanations for everything.
+AI assistance used:
 
-Link: https://chatgpt.com/share/6ab18365-84fc-83eb-b4eb-44cd3048267a
+1. Lexer
+ChatGPT suggested extending the existing KEYWORDS table with i64, bool, true, and false.
+
+It also suggested adding explicit lexer states for == and != and producing lexical errors for standalone = and !.
+
+I implemented these changes in my existing hand-written byte lexer and manually tested them using --tokens.
+
+2. AST and parser
+ChatGPT suggested:
+- adding type_name to DeclNode;
+- adding a BoolNode;
+- allowing i32, i64, and bool declarations;
+- changing the expression grammar so comparisons have lower precedence than arithmetic;
+- introducing parse_arith();
+- parsing true and false as BoolNode values;
+- removing the old i32 constant-range check from the parser because constant typing now belongs to semantic analysis.
+
+I adapted these suggestions to my existing AST and recursive-descent parser and verified the result using --ast.
+
+3. Semantic pass
+ChatGPT helped design a separate SemanticChecker class.
+
+The suggested structure included:
+- a symbol table mapping names to declaration nodes;
+- expression visitors returning and storing expression types;
+- storing the resolved declaration in node.decl;
+- determining whether integer constants are i32, i64, or out of range;
+- arithmetic type checking;
+- comparison type checking;
+- assignment compatibility checking;
+- i32-to-i64 widening rules;
+- duplicate declaration checks;
+- use-before-declaration checks;
+- mutability checks.
+
+I implemented the semantic pass incrementally and manually tested individual error cases after each part.
+
+Examples tested included:
+- duplicate declarations;
+- use before declaration;
+- i64 to i32 initialization;
+- bool in arithmetic;
+- bool compared with an integer;
+- assignment to a const variable;
+- i64 to i32 assignment;
+- integer constant overflow;
+- bool/integer initialization mismatches.
+
+4. Code generation
+ChatGPT suggested restructuring CodeGen so semantic checks no longer occur there.
+
+The code generator was changed to use node.type and node.decl produced by SemanticChecker.
+
+ChatGPT also suggested:
+- mapping i32 to LLVM i32, i64 to LLVM i64, and bool to LLVM i1;
+- using a coerce() helper for i32-to-i64 widening;
+- generating sext when widening is required;
+- generating constants according to their semantic type;
+- generating bool constants as i1;
+- widening mixed-width arithmetic operands;
+- using icmp for == and !=;
+- using select to choose between "true" and "false" when printing boolean exit values;
+- printing integer exit values as i64 using %lld.
+
+I implemented and tested these changes incrementally by inspecting generated LLVM IR and running it with lli.
+
+5. Tests
+ChatGPT helped propose Practice 4 test cases for tests/ok and tests/err.
+
+Valid cases included:
+- i32-to-i64 initialization widening;
+- widening inside arithmetic;
+- an integer constant requiring i64;
+- comparison between i32 and i64;
+- comparison between bool values;
+- bool exit.
+
+Invalid cases included:
+- bool in arithmetic;
+- i64-to-i32 initialization;
+- i64-to-i32 assignment;
+- integer initialization of bool;
+- integer constant overflow;
+- bool compared with integer;
+- standalone =.
+
+I created the test files and their .expected files and ran the tests locally.
+
+What I took as-is:
+I used several small implementation patterns suggested by ChatGPT directly or with only formatting/name adjustments, including:
+- the SemanticChecker visitor structure;
+- the check_assignable() logic;
+- the is_integer() helper;
+- the basic coerce() helper using LLVM sext;
+- the general structure for arithmetic/comparison handling in CodeGen;
+- the suggested Practice 4 test cases.
+
+What I changed / verified myself:
+- Integrated all suggestions into my existing Practice 3 compiler rather than replacing it with a generated compiler.
+- Kept and extended my existing hand-written lexer and recursive-descent parser.
+- Adjusted code to match my existing node classes, visitor naming, error() helper, and CodeGen structure.
+- Ran each feature manually from the terminal before continuing.
+- Checked lexer token positions and semantic error line:column values.
+- Inspected generated LLVM IR to verify sext, add, icmp, i1 storage, and other generated instructions.
+- Ran generated IR with lli.
+- Verified the full required Practice 4 example produces:
+
+Program exit with result 385
+
+- Verified boolean exits produce both:
+Program exit with result true
+Program exit with result false
+
+- Checked that semantic error() calls are outside CodeGen so semantic validation is performed by SemanticChecker before IR generation.
+- Ran the existing Practice 2/3 tests to check for regressions.
+
+AI did not independently execute or submit the assignment. I applied the changes to my repository, ran the commands/tests locally, inspected the outputs, and verified the resulting behavior.

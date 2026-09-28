@@ -41,7 +41,7 @@ class LexerTests(unittest.TestCase):
                  (b"  10x", "line 1:3: letter inside number"),
                  (b"x: 1", "line 1:2: ':' must be followed by '='"),
                  (b"x:", "line 1:2: ':' must be followed by '='"),
-                 (b"=", "line 1:1: unexpected byte '='"),
+                 (b"=", "line 1:1: expected '==' (a single '=' is not an operator)"),
                  (b"\xff", "line 1:1: unexpected byte '0xff'")]
         for source, expected in cases:
             with self.subTest(source=source):

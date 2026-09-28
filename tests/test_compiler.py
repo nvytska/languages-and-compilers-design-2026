@@ -28,7 +28,11 @@ class CompilerTests(unittest.TestCase):
     def test_valid_programs_compile_verify_and_run(self):
         runner = shutil.which('lli') or shutil.which('clang')
         self.assertIsNotNone(runner, 'Install lli or clang to run the valid programs')
-        for source in sorted((ROOT / 'tests/valid').glob('*.txt')):
+        sources = [
+            *(ROOT / 'tests/valid').glob('*.txt'),
+            *(ROOT / 'tests/ok').glob('*.txt'),
+        ]
+        for source in sorted(sources):
             with self.subTest(program=source.stem), tempfile.TemporaryDirectory() as folder:
                 output = Path(folder) / 'output.ll'
                 result = self.compile(source, output)
@@ -49,7 +53,11 @@ class CompilerTests(unittest.TestCase):
                 self.assertEqual(run.stderr, '')
 
     def test_invalid_programs_and_output_preservation(self):
-        for source in sorted((ROOT / 'tests/invalid').glob('*.txt')):
+        sources = [
+            *(ROOT / 'tests/invalid').glob('*.txt'),
+            *(ROOT / 'tests/err').glob('*.txt'),
+        ]
+        for source in sorted(sources):
             with self.subTest(program=source.stem), tempfile.TemporaryDirectory() as folder:
                 output = Path(folder) / 'output.ll'
                 for existing in (False, True):
