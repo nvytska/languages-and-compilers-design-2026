@@ -16,7 +16,11 @@ class CompilerTests(unittest.TestCase):
                               capture_output=True, text=True)
 
     def test_ast_dumps(self):
-        for source in sorted((ROOT / 'tests/valid').glob('*.ast')):
+        sources = [
+            *(ROOT / 'tests/valid').glob('*.ast'),
+            *(ROOT / 'tests/ok').glob('*.ast'),
+        ]
+        for source in sorted(sources):
             with self.subTest(program=source.stem):
                 result = subprocess.run(
                     [sys.executable, str(ROOT / 'compiler.py'), '--ast',

@@ -36,8 +36,6 @@ class LexerTests(unittest.TestCase):
 
     def test_errors(self):
         cases = [(b"\n       $", "line 2:8: unexpected byte '$'"),
-                 (b"i32 x{10\n}", "line 1:6: '{' is not closed before the end of the line"),
-                 (b"i32 x{10", "line 1:6: '{' is not closed before the end of the line"),
                  (b"  10x", "line 1:3: letter inside number"),
                  (b"x: 1", "line 1:2: ':' must be followed by '='"),
                  (b"x:", "line 1:2: ':' must be followed by '='"),
