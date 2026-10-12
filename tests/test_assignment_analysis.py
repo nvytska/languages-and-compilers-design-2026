@@ -48,7 +48,7 @@ class AssignmentSemanticTests(unittest.TestCase):
         analyze(structs() + "Point mut p{10, 20}\np.y := 1\nexit 0")
         with self.assertRaisesRegex(CompileError, "cannot assign bool to i32"):
             analyze(structs() + "Point mut p{10, 20}\np.x := true\nexit 0")
-        with self.assertRaisesRegex(CompileError, "cannot assign i64 to i32"):
+        with self.assertRaisesRegex(CompileError, "constant 2147483648 does not fit in i32"):
             analyze("i32 mut x{1}\nx := 2147483648\nexit 0")
 
 

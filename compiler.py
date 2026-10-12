@@ -628,10 +628,10 @@ class Parser:
             error(self.peek(), "unexpected token after return type")
         if self.next_line() is None:
             error(self.end, "expected '{' after function declaration")
-        self.expect("lbrace", message="expected '{' after function declaration")
+        opening = self.expect("lbrace", message="expected '{' after function declaration")
         if self.peek() is not None:
             error(self.peek(), "expected '{' on its own line")
-        body = self.parse_block(fn_token)
+        body = self.parse_block(fn_token, opening)
         return FunctionDeclNode(
             fn_token.line, fn_token.column, name.text,
             params, return_type.text, body,
@@ -678,6 +678,8 @@ class Parser:
 
     def parse_statement(self):
         token = self.peek()
+        if token.kind == "keyword" and token.text == "else":
+            error(token, "'else' without an 'if'")
         if (
             token.kind == "keyword"
             and token.text in ("i32", "i64", "bool")
@@ -724,14 +726,14 @@ class Parser:
                 got or self.end,
                 "expected '{' on its own line after 'if'",
             )
-        self.eat()
+        opening = self.eat()
         if self.peek() is not None:
             error(
                 self.peek(),
                 f"unexpected '{self.peek().text}' after '{{'",
             )
 
-        then_block = self.parse_block(if_token)
+        then_block = self.parse_block(if_token, opening)
         else_block = None
         next_tokens = self.peek_line()
         if (
@@ -763,13 +765,13 @@ class Parser:
                     got or self.end,
                     "expected '{' on its own line after 'else'",
                 )
-            self.eat()
+            opening = self.eat()
             if self.peek() is not None:
                 error(
                     self.peek(),
                     f"unexpected '{self.peek().text}' after '{{'",
                 )
-            else_block = self.parse_block(else_token)
+            else_block = self.parse_block(else_token, opening)
 
         return IfNode(
             if_token.line,
@@ -779,13 +781,13 @@ class Parser:
             else_block,
         )
 
-    def parse_block(self, owner):
+    def parse_block(self, owner, opening):
         statements = []
         exit_node = None
         while True:
             tokens = self.next_line()
             if tokens is None:
-                error(owner, "'{' is never closed")
+                error(opening, "'{' is never closed")
             first = self.peek()
             if first.kind == "rbrace":
                 self.eat()
@@ -795,7 +797,7 @@ class Parser:
                         f"unexpected '{self.peek().text}' after '}}'",
                     )
                 if not statements and exit_node is None:
-                    error(first, "empty block")
+                    error(opening, "empty block")
                 return BlockNode(
                     owner.line,
                     owner.column,
@@ -848,7 +850,7 @@ class Parser:
             previous = self.toks[self.pos - 1]
             end_of_line = Token(
                 "endline", "", previous.line,
-                previous.column + len(previous.text) - 1,
+                previous.column + len(previous.text),
             )
             error(end_of_line, "expected '}', found end of line")
         self.expect(
@@ -926,6 +928,12 @@ class Parser:
 
     def parse_factor(self):
         token = self.peek()
+        if token is None and self.pos > 0:
+            previous = self.toks[self.pos - 1]
+            error(
+                Token("endline", "", previous.line, previous.column + len(previous.text)),
+                "expected a constant or variable",
+            )
         if (
             token is not None
             and token.kind == "operator"
@@ -1123,11 +1131,16 @@ class SemanticAnalyzer:
             for value, field in zip(node.values, struct.fields):
                 self.check_initializer(value, field.type_name)
             return expected_type
+        self.check_constant_range(node, expected_type)
         actual_type = self.visit(node)
         if actual_type != expected_type:
             if not (expected_type == "i64" and actual_type == "i32"):
                 error(node, f"cannot initialize {expected_type} with {actual_type}")
         return expected_type
+
+    def check_constant_range(self, node, expected_type):
+        if expected_type == "i32" and isinstance(node, ConstNode) and node.value > 2147483647:
+            error(node, f"constant {node.value} does not fit in i32")
 
     def visit_DeclNode(self, node):
         frame = self.scopes[-1]
@@ -1141,6 +1154,7 @@ class SemanticAnalyzer:
                 error(node, "primitive type requires exactly one initializer")
             if isinstance(node.inits[0], StructInitNode):
                 self.check_initializer(node.inits[0], node.type_name)
+            self.check_constant_range(node.inits[0], node.type_name)
             init_type = self.visit(node.inits[0])
             if init_type != node.type_name:
                 if not (node.type_name == "i64" and init_type == "i32"):
@@ -1207,6 +1221,7 @@ class SemanticAnalyzer:
         target_type = self.visit(node.target)
         if not self.is_mutable_target(node.target):
             error(node, "cannot assign to a constant variable or field")
+        self.check_constant_range(node.value, target_type)
         value_type = self.visit(node.value)
         if value_type != target_type:
             if not (target_type == "i64" and value_type == "i32"):

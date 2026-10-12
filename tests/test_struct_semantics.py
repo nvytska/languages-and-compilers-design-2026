@@ -63,7 +63,7 @@ class StructSemanticTests(unittest.TestCase):
             ("Unknown p{1}\nexit 0", "unknown struct type 'Unknown'"),
             ("i32 x{1, 2}\nexit 0", "primitive type requires exactly one initializer"),
             ("i32 x{true}\nexit 0", "cannot initialise 'x'"),
-            ("struct Box\n{\ni32 value\n}\nBox b{2147483648}\nexit 0", "cannot initialize i32 with i64"),
+            ("struct Box\n{\ni32 value\n}\nBox b{2147483648}\nexit 0", "constant 2147483648 does not fit in i32"),
             (POINT + "Point p{10, 20}\nPoint p{p}\nexit 0", "already declared in this block"),
         ]
         for source, message in cases:
