@@ -1,84 +1,19 @@
-Practice 5 — AI Usage
+# AI Usage — Practice 6
 
-Tool used:
-ChatGPT https://chatgpt.com/share/6ac3fff0-9ee0-83eb-926c-e531f3bca410
+**AI Tool:** ChatGPT (OpenAI)
 
-How AI was used:
-- Reviewed the Practice 5 specification and helped break the work into incremental steps.
-- Helped update the lexer to support:
-  - `if`
-  - `else`
-  - standalone `!`
-  - braces as normal tokens instead of matching them inside the lexer.
-- Helped extend the AST with:
-  - `IfNode`
-  - `BlockNode`
-  - `NotNode`
-  - `BoolNode`
-  - declaration type information.
-- Helped redesign the parser to support multi-line statements using a line cursor.
-- Helped implement parsing for:
-  - `if`
-  - optional `else`
-  - nested blocks
-  - `exit` inside blocks
-  - unary `!`
-  - boolean constants
-  - `==` and `!=`.
-- Helped implement a separate semantic-analysis pass with a stack of scope frames.
-- Helped implement:
-  - block scoping
-  - shadowing
-  - same-scope redeclaration checks
-  - variable resolution through `node.decl`
-  - use-after-scope errors
-  - bool-only `if` conditions
-  - bool-only `!`
-  - assignment type checking
-  - declaration type checking
-  - i32-to-i64 widening.
-- Helped update LLVM code generation to support:
-  - `i32`, `i64`, and `bool`
-  - entry-block `alloca`
-  - declaration-based slot lookup instead of name-based lookup
-  - `then`, `else`, and `merge` basic blocks
-  - conditional branches
-  - nested `if`
-  - `exit` inside a branch
-  - protection against multiple terminators
-  - boolean negation
-  - integer comparisons
-  - boolean output as `true` / `false`.
-- Helped verify SSA promotion using:
-  `opt -passes=mem2reg -S`
-  and confirmed the generated phi node:
-  `%r.0 = phi i32 [ 1, %then ], [ 2, %else ]`
-- Helped create the required Practice 5 `tests/ok` and `tests/err` cases.
-- Helped identify regressions from previous practices and restore compatibility for:
-  - bool arithmetic error messages
-  - i64 integer literals
-  - i64 overflow detection
-  - narrowing initialization
-  - narrowing assignment
-  - parser error wording.
+https://chatgpt.com/share/6accfd84-6214-83ed-baf2-368f0b22ec9a
 
-Example prompts used:
-- “lets do this practice step by step”
-- “lets move on”
-- Shared compiler output and asked for the next implementation step.
-- Shared compiler errors and test failures for debugging.
+## Purpose
 
-What was taken as-is:
-- Some suggested AST node structures.
-- The general scope-stack design.
-- The general LLVM `then` / `else` / `merge` structure.
-- Some test-case templates.
+I used ChatGPT as a step-by-step assistant while implementing Practice 6: Structs and Functions in my existing compiler.
 
-What was changed or adapted manually:
-- Integrated all suggested changes into the existing `compiler.py` structure.
-- Adjusted code to preserve compatibility with previous Practice 3 and Practice 4 tests.
-- Ran all commands and tests manually.
-- Fixed implementation details based on actual compiler output and test results.
-- Kept the existing repository layout with `compiler.py` in the project root instead of moving it to `src/`.
+## How I used AI
 
-AI did not independently submit or run the assignment. All generated suggestions were reviewed, integrated, and tested manually.
+1. **Planning and understanding:** Asked ChatGPT to break the assignment into smaller implementation steps and explain the required changes.
+
+2. **Lexer and parser:** Used AI suggestions to introduce new tokens, AST nodes, struct declarations, function declarations, function calls, field access, and nested initialization.
+
+3. **Semantic analysis:** Used AI-generated examples for validating struct field types, initializer counts, function signatures, return types, argument types, and mutability.
+
+4. **LLVM code generation:** Used AI guidance for named struct types, `alloca`, `getelementptr`, `store`, `call`, `ret`, and `insertvalue
