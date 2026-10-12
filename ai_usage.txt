@@ -1,10 +1,84 @@
-AI usage log — Practice 3
+Practice 5 — AI Usage
 
-Codex implemented the Practice 3 compiler logic on local practice-3 branch.
+Tool used:
+ChatGPT https://chatgpt.com/share/6ac3fff0-9ee0-83eb-926c-e531f3bca410
 
+How AI was used:
+- Reviewed the Practice 5 specification and helped break the work into incremental steps.
+- Helped update the lexer to support:
+  - `if`
+  - `else`
+  - standalone `!`
+  - braces as normal tokens instead of matching them inside the lexer.
+- Helped extend the AST with:
+  - `IfNode`
+  - `BlockNode`
+  - `NotNode`
+  - `BoolNode`
+  - declaration type information.
+- Helped redesign the parser to support multi-line statements using a line cursor.
+- Helped implement parsing for:
+  - `if`
+  - optional `else`
+  - nested blocks
+  - `exit` inside blocks
+  - unary `!`
+  - boolean constants
+  - `==` and `!=`.
+- Helped implement a separate semantic-analysis pass with a stack of scope frames.
+- Helped implement:
+  - block scoping
+  - shadowing
+  - same-scope redeclaration checks
+  - variable resolution through `node.decl`
+  - use-after-scope errors
+  - bool-only `if` conditions
+  - bool-only `!`
+  - assignment type checking
+  - declaration type checking
+  - i32-to-i64 widening.
+- Helped update LLVM code generation to support:
+  - `i32`, `i64`, and `bool`
+  - entry-block `alloca`
+  - declaration-based slot lookup instead of name-based lookup
+  - `then`, `else`, and `merge` basic blocks
+  - conditional branches
+  - nested `if`
+  - `exit` inside a branch
+  - protection against multiple terminators
+  - boolean negation
+  - integer comparisons
+  - boolean output as `true` / `false`.
+- Helped verify SSA promotion using:
+  `opt -passes=mem2reg -S`
+  and confirmed the generated phi node:
+  `%r.0 = phi i32 [ 1, %then ], [ 2, %else ]`
+- Helped create the required Practice 5 `tests/ok` and `tests/err` cases.
+- Helped identify regressions from previous practices and restore compatibility for:
+  - bool arithmetic error messages
+  - i64 integer literals
+  - i64 overflow detection
+  - narrowing initialization
+  - narrowing assignment
+  - parser error wording.
 
-First fetch and pull the latest changes from the repository. implement a hand-written recursive-descent parser that builds an AST; add `--ast` to print it; generate LLVM IR by walking the AST; and support expression chains with `*` taking precedence over `+` and `-`, with left associativity. Preserve the Practice 2 behavior and add valid and invalid tests with expected outputs. Run the full test suite and verify that the Task 4 example prints `Program exit with result 120`. Keep all changes on `practice-3`. Do not commit or push anything without my approval.
+Example prompts used:
+- “lets do this practice step by step”
+- “lets move on”
+- Shared compiler output and asked for the next implementation step.
+- Shared compiler errors and test failures for debugging.
 
-Also Codex generated README explanations for everything.
+What was taken as-is:
+- Some suggested AST node structures.
+- The general scope-stack design.
+- The general LLVM `then` / `else` / `merge` structure.
+- Some test-case templates.
 
-Link: https://chatgpt.com/share/6ab18365-84fc-83eb-b4eb-44cd3048267a
+What was changed or adapted manually:
+- Integrated all suggested changes into the existing `compiler.py` structure.
+- Adjusted code to preserve compatibility with previous Practice 3 and Practice 4 tests.
+- Ran all commands and tests manually.
+- Fixed implementation details based on actual compiler output and test results.
+- Kept the existing repository layout with `compiler.py` in the project root instead of moving it to `src/`.
+
+AI did not independently submit or run the assignment. All generated suggestions were reviewed, integrated, and tested manually.

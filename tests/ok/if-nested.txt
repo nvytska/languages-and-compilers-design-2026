@@ -1,0 +1,11 @@
+i32 mut x{10}
+if true
+{
+bool x{true}
+if x
+{
+i32 mut y{20}
+exit y
+}
+}
+exit x

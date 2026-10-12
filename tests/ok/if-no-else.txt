@@ -1,0 +1,6 @@
+i32 mut x{10}
+if true
+{
+x := x + 5
+}
+exit x
