@@ -105,6 +105,15 @@ def check_ast(expected):
     return True, ""
 
 
+def check_tokens(source):
+    result = run([sys.executable, str(COMPILER), "--tokens", str(source)])
+    if result.returncode != 0 or result.stderr:
+        return False, result.stderr.strip()
+    if result.stdout != source.with_suffix(".expected").read_text():
+        return False, f"token output differs for {source.name}"
+    return True, ""
+
+
 def main():
     runner = shutil.which("lli") or shutil.which("clang")
     if runner is None:
@@ -112,6 +121,10 @@ def main():
         return 1
 
     rows = []
+
+    source = ROOT / "tests" / "lexer-example.txt"
+    passed, detail = check_tokens(source)
+    rows.append((passed, "lexer", source.relative_to(ROOT), detail))
 
     for source in source_files("valid", "ok"):
         passed, detail = check_success(source, runner)
