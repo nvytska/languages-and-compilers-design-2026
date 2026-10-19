@@ -1,0 +1,10 @@
+struct Point
+{
+    fn getX := () -> i32
+    {
+        exit 5
+    }
+
+    i32 x
+}
+exit 0

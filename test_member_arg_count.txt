@@ -1,0 +1,13 @@
+struct Point
+{
+    i32 x
+
+    fn add := (i32 a, i32 b) -> i32
+    {
+        i32 sum{x + a + b}
+        exit sum
+    }
+}
+Point p{3}
+i32 result{p.add(2)}
+exit result

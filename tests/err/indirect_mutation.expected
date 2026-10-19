@@ -1,0 +1,1 @@
+compilation error: line 19:8: cannot call mutating member function 'twice' on a constant object or field

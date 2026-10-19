@@ -1,0 +1,13 @@
+struct Point
+{
+    i32 mut x
+    i32 mut y
+
+    fn d2 := () -> i32
+    {
+        i32 result{x * x + y * y}
+        exit result
+    }
+}
+Point p{3, 4}
+exit p.x
