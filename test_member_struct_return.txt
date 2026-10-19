@@ -1,0 +1,15 @@
+struct Point
+{
+    i32 x
+    i32 y
+
+    fn moved := (i32 dx) -> Point
+    {
+        Point result{x + dx, y}
+        exit result
+    }
+}
+Point p{3, 4}
+Point q{p.moved(5)}
+print(q)
+exit q.x

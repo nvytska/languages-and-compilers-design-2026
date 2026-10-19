@@ -1,0 +1,5 @@
+print("Hello world")
+print("Progress: 100%")
+print("")
+print("Backslash: \n")
+exit 0

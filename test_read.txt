@@ -1,0 +1,4 @@
+i32 x{read()}
+i32 y{read() + 5}
+i32 total{x + y}
+exit total

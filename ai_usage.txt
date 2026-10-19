@@ -1,19 +1,47 @@
-# AI Usage — Practice 6
 
-**AI Tool:** ChatGPT (OpenAI)
+AI Usage Report — Practice 7: Member Functions
 
-https://chatgpt.com/share/6accfd84-6214-83ed-baf2-368f0b22ec9a
+AI Tool: ChatGPT (OpenAI)
 
-## Purpose
+1. Planning
+Used ChatGPT to break the assignment into smaller implementation
+steps and identify the required changes to the parser, AST,
+semantic analyzer, and LLVM code generator.
 
-I used ChatGPT as a step-by-step assistant while implementing Practice 6: Structs and Functions in my existing compiler.
+2. Parser and AST
+Discussed how to represent member function declarations,
+member function calls, and chained expressions in the AST.
+Implemented and tested the suggested changes incrementally.
 
-## How I used AI
+3. Semantic Analysis
+Used ChatGPT to reason about member function resolution,
+field visibility, shadowing, mutability rules, and mutation
+propagation across member function calls.
 
-1. **Planning and understanding:** Asked ChatGPT to break the assignment into smaller implementation steps and explain the required changes.
+4. LLVM Code Generation
+Discussed how to pass the current struct instance using a
+hidden 'this' pointer, generate member function calls, and
+handle temporary struct values returned by functions.
 
-2. **Lexer and parser:** Used AI suggestions to introduce new tokens, AST nodes, struct declarations, function declarations, function calls, field access, and nested initialization.
+5. Built-in Functions
+Used ChatGPT to help implement and test read() and print(),
+including LLVM integration with scanf() and printf().
 
-3. **Semantic analysis:** Used AI-generated examples for validating struct field types, initializer counts, function signatures, return types, argument types, and mutability.
+6. Additional Task
+Used ChatGPT to understand and implement chained calls
+through temporary struct values, including field access
+and mutating member function calls on temporary copies.
 
-4. **LLVM code generation:** Used AI guidance for named struct types, `alloca`, `getelementptr`, `store`, `call`, `ret`, and `insertvalue
+7. Testing and Debugging
+Used ChatGPT to develop test scenarios, investigate compilation
+errors, and identify edge cases involving constant fields,
+mutation propagation, and LLVM function-name collisions.
+
+Final test results:
+Passed: 65
+Failed: 0
+
+8. Verification
+I implemented the changes in my compiler, ran the tests,
+checked the generated results, and verified the implementation
+through an automated regression test suite.

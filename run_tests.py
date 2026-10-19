@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
+COMPILER = ROOT / "compiler.py"
 
 
 def main():
@@ -24,14 +25,15 @@ def main():
                 print(f"MISSING EXPECTED: {label}")
                 failed += 1
                 continue
-            expected = expected_file.read_text().strip()
-            with tempfile.TemporaryDirectory(prefix="practice6_test_") as directory:
+            expected = expected_file.read_text()
+            input_file = source.with_suffix(".in")
+            with tempfile.TemporaryDirectory(prefix="practice7_test_") as directory:
                 output_file = Path(directory) / "output.ll"
                 result = subprocess.run(
-                    [sys.executable, str(ROOT / "compiler.py"), str(source), str(output_file)],
+                    [sys.executable, str(COMPILER), str(source), str(output_file)],
                     capture_output=True, text=True,
                 )
-                actual = result.stderr.strip()
+                actual = result.stderr
                 if folder == "err":
                     success = result.returncode != 0 and actual == expected
                 else:
@@ -46,12 +48,14 @@ def main():
                                 capture_output=True, text=True,
                             )
                             command = [str(executable)] if link.returncode == 0 else None
-                            actual = link.stderr.strip()
+                            actual = link.stderr
                         if command is not None:
-                            execution = subprocess.run(command, capture_output=True, text=True)
+                            stdin = input_file.read_bytes() if input_file.exists() else b""
+                            execution = subprocess.run(command, input=stdin, capture_output=True)
                             actual = (
-                                execution.stdout.strip() if execution.returncode == 0
-                                else execution.stderr.strip()
+                                execution.stdout.decode("utf-8", errors="replace")
+                                if execution.returncode == 0
+                                else execution.stderr.decode("utf-8", errors="replace")
                             )
                             success = execution.returncode == 0 and actual == expected
                 if success:
@@ -59,8 +63,8 @@ def main():
                     passed += 1
                 else:
                     print(f"FAIL {label}")
-                    print(f"  Expected: {expected}")
-                    print(f"  Actual:   {actual}")
+                    print(f"  Expected: {expected!r}")
+                    print(f"  Actual:   {actual!r}")
                     failed += 1
     print(f"\nPassed: {passed}\nFailed: {failed}")
     return 1 if failed else 0
