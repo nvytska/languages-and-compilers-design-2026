@@ -1,0 +1,7 @@
+fn calculate := [missing](i32 x) -> i32
+{
+    i32 result{x * 2}
+    exit result
+}
+
+exit 0

@@ -1,0 +1,14 @@
+struct Point
+{
+    i32 x
+    i32 y
+}
+
+fn origin := () -> Point
+{
+    Point p{0, 0}
+    exit p
+}
+
+print(origin())
+exit 0

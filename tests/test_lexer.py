@@ -7,6 +7,11 @@ from compiler import CompileError, lex
 
 
 class LexerTests(unittest.TestCase):
+    def test_lexer_example_expected_output(self):
+        source = Path(__file__).with_name("lexer-example.txt")
+        actual = "".join(f"{token!r}\n" for line in lex(source.read_bytes()) for token in line)
+        self.assertEqual(actual, source.with_suffix(".expected").read_text())
+
     def test_worked_example(self):
         tokens = lex(b"   i32 mut x{ 10 }\n    var t")
         self.assertEqual(

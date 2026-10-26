@@ -1,0 +1,7 @@
+fn recursive := [](i32 n) -> i32
+{
+    i32 result{recursive(n)}
+    exit result
+}
+
+exit 0

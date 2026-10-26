@@ -1,0 +1,14 @@
+struct Circle
+{
+    i32 radius
+
+    fn grown := (i32 dr) -> Circle
+    {
+        Circle result{radius + dr}
+        exit result
+    }
+}
+Circle c{2}
+i32 result{c.grown(3).radius}
+print(c.radius)
+exit result
