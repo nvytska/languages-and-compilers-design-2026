@@ -1,47 +1,122 @@
+AI USAGE REPORT — PRACTICE 8: CALLABLE OBJECTS AND LAMBDAS
+Course: Languages and Compilers Design, Week 8
+Tool used: ChatGPT (OpenAI, GPT-6)
 
-AI Usage Report — Practice 7: Member Functions
+1. HOW AI WAS USED
+I used ChatGPT throughout Practice 8 for step-by-step guidance, code snippets,
+implementation instructions, debugging suggestions, test programs, and expected
+outputs. I implemented the code changes in my compiler following ChatGPT's
+instructions. I kept the proposed implementation and fixes as suggested,
+without independently redesigning or changing the supplied solutions.
 
-AI Tool: ChatGPT (OpenAI)
+2. EXACT PROMPTS / USER MESSAGES
+The following are verbatim user messages from the ChatGPT conversation,
+listed in chronological order. Some messages are short confirmations or
+compiler outputs supplied to ChatGPT rather than substantive prompts.
+The compiler file compiler(6).py and assignment w08-practice.pdf were uploaded
+as additional context.
 
-1. Planning
-Used ChatGPT to break the assignment into smaller implementation
-steps and identify the required changes to the parser, AST,
-semantic analyzer, and LLVM code generator.
+- "lets do this practice step by step"
+- [Uploaded compiler(6).py]
+- "done"
+- "done"
+- "42\n42\nProgram exit with result 0"
+- "compilation error: line 24:9: struct 'Shape' has no member function 'scale'"
+- "14\n10\nProgram exit with result 0"
+- "Counter{n: 2}\nProgram exit with result 12"
+- "compilation error: line 12:7: cannot call mutating member function 'call' on a constant object or field"
+- "compilation error: line 2:7: 'n' is not callable: it is i32"
+- "compilation error: line 8:7: 'twice' is both a variable and a function: rename one of them"
+- "compilation error: line 12:7: member function 'call' expects 1 arguments, got 2"
+- "compilation error: line 12:7: 'triple' expects 1 argument, got 2 compilation error: line 12:14: 'triple' expects argument of type i32, got bool"
+- "compilation error: line 8:7: 'p' is not callable: Point has no member function 'call'"
+- "42\n42\n14\n10\nCounter{n: 2}\nProgram exit with result 12"
+- "Token(kind='keyword', text='fn', line=1, column=1)\nToken(kind='identifier', text='add_k', line=1, column=4)\nToken(kind='operator', text=':=', line=1, column=10)\nToken(kind='lbracket', text='[', line=1, column=13)\nToken(kind='identifier', text='k', line=1, column=14)\nToken(kind='rbracket', text=']', line=1, column=15)\nToken(kind='lparen', text='(', line=1, column=16)\nToken(kind='keyword', text='i32', line=1, column=17)\nToken(kind='identifier', text='y', line=1, column=21)\nToken(kind='rparen', text=')', line=1, column=22)\nToken(kind='arrow', text='->', line=1, column=24)\nToken(kind='keyword', text='i32', line=1, column=27)\nToken(kind='endline', text='\\\\n', line=1, column=30)"
+- "done"
+- "Program\n  Decl k i32 const\n    Const 10\n  Lambda add_k -> i32\n    Capture k const\n    Param y i32\n    Block\n      Decl r i32 const\n        BinOp +\n          Var k\n          Var y\n      Exit\n        Var r\n  Exit\n    Const 0"
+- "compilation error: line 2:17: 'k' is captured twice"
+- "compilation error: line 6:11: unknown variable or field 'x'AttributeError: 'CodeGen' object has no attribute 'visit_LambdaNode'"
+- "done"
+- "done"
+- "done"
+- "done"
+- "Program\n  Struct lambda.add_k\n    Field k i32 const\n    MemberFn call -> i32\n      Param y i32\n      Block\n        Decl r i32 const\n          BinOp +\n            Var k\n            Var y\n        Exit\n          Var r\n  Decl k i32 const\n    Const 10\n  Decl x i32 const\n    Const 20\n  Decl add_k lambda.add_k const\n    Var k\n  Exit\n    Const 0"
+- "15\nProgram exit with result 0"
+- "Program exit with result 15"
+- "15\n100\nProgram exit with result 11"
+- "15\nProgram exit with result 0"
+- "compilation error: line 12:7: unknown function 'add_k'"
+- "49\nProgram exit with result 0"
+- "how much tests should we complete for the 2?"
+- "30\nProgram exit with result 0"
+- "compilation error: line 5:11: 'k' is not captured by lambda 'add_k': add it to the capture list, [k]"
+- "how much functionality is left for the task 2?"
+- "compilation error: line 13:14: expected i32, got lambda.times"
+- "compilation error: line 13:14: 'times' is a lambda and cannot be passed to 'square': its type has no name, so no parameter can have it"
+- "compilation error: line 7:7: cannot print a lambda: lambda values cannot be used here because their type has no name"
+- "compilation error: line 7:6: cannot return a lambda: lambda values cannot be used here because their type has no name      Program exit with result 25"
+- "compilation error: line 13:6: cannot assign a lambda: lambda values cannot be used here because their type has no name 30\nProgram exit with result 0"
+- "Lambda add_k -> i32\n    Capture k const\n    Param y i32"
+- "Struct lambda.add_k\n    Field k i32 const\n    MemberFn call -> i32\n      Param y i32\n      ...\n  Decl k i32 mut\n    Const 10\n  Decl add_k lambda.add_k const\n    Var k"
+- "%\"lambda.add_k\" = type {i32}\n  %\"add_k\" = alloca %\"lambda.add_k\"\n  %\".3\" = getelementptr inbounds %\"lambda.add_k\", %\"lambda.add_k\"* %\"add_k\", i32 0, i32 0\n  %\"call_call\" = call i32 @\"lambda.add_k_call\"(%\"lambda.add_k\"* %\"add_k\", i32 5)\n  %\"call_call.1\" = call i32 @\"lambda.add_k_call\"(%\"lambda.add_k\"* %\"add_k\", i32 1)\ndefine i32 @\"lambda.add_k_call\"(%\"lambda.add_k\"* %\"this\", i32 %\"y\")\n  %\"ptr_k\" = getelementptr inbounds %\"lambda.add_k\", %\"lambda.add_k\"* %\"this\", i32 0, i32 0"
+- "compilation error: line 1:18: cannot capture 'missing': no variable 'missing' is visible here compilation error: line 5:5: cannot assign to a constant variable or field"
+- "compilation error: line 5:5: cannot assign to 'k': the capture 'k' is const, write [mut k]"
+- "compilation error: line 3:16: unknown function 'recursive'"
+- "Token(kind='keyword', text='while', line=1, column=1)\nToken(kind='identifier', text='i', line=1, column=7)\nToken(kind='operator', text='!=', line=1, column=9)\nToken(kind='number', text='5', line=1, column=12)\nToken(kind='endline', text='\\\\n', line=1, column=13)"
+- "Program\n  Decl i i32 mut\n    Const 0\n  While\n    BinOp !=\n      Var i\n      Const 3\n    Block\n      Print\n        Var i\n      Assign\n        Var i\n        BinOp +\n          Var i\n          Const 1\n  Exit\n    Const 0"
+- "Program\n  Decl i i32 mut\n    Const 0\n  While\n    BinOp !=\n      Var i\n      Const 3\n    Block\n      Print\n        Var i\n      Assign\n        Var i\n        BinOp +\n          Var i\n          Const 1\n  Exit\n    Const 0"
+- "compilation error: line 3:9: the condition of 'while' must be bool, got i32"
+- "0\n1\n2\nProgram exit with result 0"
+- "10\n11\n12\nProgram exit with result 0"
+- "compilation error: line 1:7: unknown function 'square'      compilation error: line 12:10: cannot initialize a variable with a lambda: lambda values cannot be used here because their type has no name"
+- "tests/ok/task1_full_test.txt\ntests/ok/lambda_capture_test.txt\ntests/ok/lambda_nested_test.txt\ntests/ok/lambda_empty_test.txt\ntests/ok/lambda_nested_capture_test.txt\ntests/ok/lambda_loop_test.txt"
+- "tests/err/callable_error_test.txt\ntests/err/callable_no_method_test.txt\ntests/err/lambda_missing_capture_test.txt\ntests/err/lambda_unknown_capture.txt\ntests/err/lambda_const_capture.txt\ntests/err/lambda_recursion_error.txt\ntests/err/lambda_initializer_error.txt"
+- "Passed: 78\nFailed: 0"
+- "create me ai usage with exact prompts and that i left evrthh as you suggested"
 
-2. Parser and AST
-Discussed how to represent member function declarations,
-member function calls, and chained expressions in the AST.
-Implemented and tested the suggested changes incrementally.
+3. AI-GENERATED IMPLEMENTATION USED AS-IS
+I followed ChatGPT's step-by-step code suggestions without modifying their
+intended algorithms or replacing them with independently written solutions.
 
-3. Semantic Analysis
-Used ChatGPT to reason about member function resolution,
-field visibility, shadowing, mutability rules, and mutation
-propagation across member function calls.
+Task 1 — callable objects:
+- Added lookup for visible variables and fields.
+- Rewrote calls on callable struct variables to member calls named 'call'.
+- Supported callable fields such as s.scale(7) and implicit field calls.
+- Reused existing member-call argument checks and mutation validation.
+- Improved diagnostics for non-callable types, ambiguous names, argument counts,
+  and wrong argument types.
 
-4. LLVM Code Generation
-Discussed how to pass the current struct instance using a
-hidden 'this' pointer, generate member function calls, and
-handle temporary struct values returned by functions.
+Task 2 — lambdas:
+- Added square-bracket lexer tokens, CaptureNode, and LambdaNode.
+- Added lambda parsing at top level and in blocks.
+- Checked duplicate/unknown captures, parameter conflicts, and isolated scopes.
+- Generated synthetic structs and member functions for lambda objects.
+- Added generated lambda declarations and capture-by-value initialization.
+- Rebound capture references to generated fields.
+- Rewrote lambda nodes in semantic analysis, including nested blocks.
+- Supported zero-capture lambdas and capturing another lambda.
+- Added line/column diagnostics for invalid lambda uses and missing captures.
+- Added --ast-checked output and callable-call AST labels.
+- Added 'while' parsing, semantic checks, and LLVM IR control flow so lambda
+  capture values can be tested inside loops.
 
-5. Built-in Functions
-Used ChatGPT to help implement and test read() and print(),
-including LLVM integration with scanf() and printf().
+Task 3 — tests:
+- Followed the suggested test cases, directory structure, and Python runner.
+- Added valid and invalid programs, output expectations, and regression tests.
+- Reported test outcome: Passed: 78; Failed: 0.
 
-6. Additional Task
-Used ChatGPT to understand and implement chained calls
-through temporary struct values, including field access
-and mutating member function calls on temporary copies.
+4. WHAT I CHANGED MYSELF
+I did not intentionally change the AI-provided implementation suggestions.
+My work consisted of applying the suggested edits to my existing compiler,
+running the proposed test commands, sharing actual output/errors with ChatGPT,
+and incorporating its subsequent fixes as suggested.
 
-7. Testing and Debugging
-Used ChatGPT to develop test scenarios, investigate compilation
-errors, and identify edge cases involving constant fields,
-mutation propagation, and LLVM function-name collisions.
+5. VERIFICATION / LIMITS
+The reported successful tests and LLVM snippets above are outputs from my local
+runs shared during the chat. ChatGPT guided the development, but the final
+local repository contents, test baseline files, and pull request are not
+independently verified by this report.
 
-Final test results:
-Passed: 65
-Failed: 0
-
-8. Verification
-I implemented the changes in my compiler, ran the tests,
-checked the generated results, and verified the implementation
-through an automated regression test suite.
+6. CODE GENERATION
+All LLVM IR generation changes were suggested in Python using llvmlite.ir's
+IRBuilder API. No LLVM IR was assembled from handwritten text strings.

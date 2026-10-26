@@ -31,6 +31,7 @@ KEYWORDS = {
     "true": "keyword",
     "false": "keyword",
     "if": "keyword",
+    "while": "keyword",
     "else": "keyword",
     "struct": "keyword",
     "fn": "keyword",
@@ -136,6 +137,12 @@ def lex(data: bytes):
 
             elif b == ord(")"):
                 tokens.append(Token("rparen", ")", line, col))
+
+            elif b == ord("["):
+                tokens.append(Token("lbracket", "[", line, col))
+
+            elif b == ord("]"):
+                tokens.append(Token("rbracket", "]", line, col))
 
             elif b == ord("*"):
                 tokens.append(
@@ -362,6 +369,16 @@ class ParamNode(Node):
 
 
 @dataclass
+class CaptureNode(Node):
+    name: str
+    mutable: bool = False
+
+    def label(self):
+        mode = "mut" if self.mutable else "const"
+        return f"Capture {self.name} {mode}"
+
+
+@dataclass
 class FunctionDeclNode(Node):
     name: str
     params: list
@@ -391,6 +408,21 @@ class MemberFnNode(Node):
 
 class StmtNode(Node):
     pass
+
+
+@dataclass
+class LambdaNode(StmtNode):
+    name: str
+    captures: list
+    params: list
+    return_type: str
+    body: "BlockNode"
+
+    def label(self):
+        return f"Lambda {self.name} -> {self.return_type}"
+
+    def children(self):
+        return (*self.captures, *self.params, self.body)
 
 
 class ExprNode(Node):
@@ -441,6 +473,8 @@ class MemberCallNode(ExprNode):
     args: list
 
     def label(self):
+        if hasattr(self, "callable_name"):
+            return f"CallableCall {self.callable_name}"
         return f"MemberCall {self.name}"
 
     def children(self):
@@ -503,6 +537,18 @@ class BlockNode(Node):
         if self.exit is not None:
             return (*self.statements, self.exit)
         return tuple(self.statements)
+
+
+@dataclass
+class WhileNode(StmtNode):
+    condition: ExprNode
+    body: BlockNode
+
+    def label(self):
+        return "While"
+
+    def children(self):
+        return (self.condition, self.body)
 
 
 @dataclass
@@ -650,9 +696,17 @@ class Parser:
                 structs.append(self.parse_struct())
                 continue
             if first.kind == "keyword" and first.text == "fn":
-                if statements:
-                    error(first, "function must be declared before statements")
-                functions.append(self.parse_function())
+                # A capture list identifies a lambda.
+                is_lambda = (
+                    len(self.toks) > 3
+                    and self.toks[3].kind == "lbracket"
+                )
+                if is_lambda:
+                    statements.append(self.parse_lambda())
+                else:
+                    if statements:
+                        error(first, "function must be declared before statements")
+                    functions.append(self.parse_function())
                 continue
             if first.kind == "keyword" and first.text == "exit":
                 exit_node = self.parse_exit()
@@ -668,6 +722,66 @@ class Parser:
         if exit_node is None:
             error(self.end, "program needs an exit statement")
         return ProgramNode(1, 1, structs, functions, statements, exit_node)
+
+    def parse_lambda(self):
+        fn_token = self.expect("keyword", "fn")
+        name = self.expect("identifier", message="expected lambda name")
+        self.expect("operator", ":=", message="expected ':=' after lambda name")
+        self.expect("lbracket", message="expected '[' before lambda captures")
+        captures = []
+        if self.peek() is not None and self.peek().kind != "rbracket":
+            while True:
+                mutable = False
+                if self.peek() is not None and self.peek().text == "mut":
+                    self.eat()
+                    mutable = True
+                capture_name = self.expect(
+                    "identifier", message="expected capture name",
+                )
+                captures.append(CaptureNode(
+                    capture_name.line, capture_name.column,
+                    capture_name.text, mutable,
+                ))
+                if self.peek() is not None and self.peek().kind == "comma":
+                    self.eat()
+                else:
+                    break
+        self.expect("rbracket", message="expected ']' after lambda captures")
+        self.expect("lparen", message="expected '(' after lambda captures")
+        params = []
+        if self.peek() is not None and self.peek().kind != "rparen":
+            while True:
+                type_token = self.peek()
+                if type_token is None or type_token.kind not in ("keyword", "identifier"):
+                    error(type_token or self.end, "expected parameter type")
+                self.eat()
+                param_name = self.expect("identifier", message="expected parameter name")
+                params.append(ParamNode(
+                    param_name.line, param_name.column,
+                    param_name.text, type_token.text,
+                ))
+                if self.peek() is not None and self.peek().kind == "comma":
+                    self.eat()
+                else:
+                    break
+        self.expect("rparen", message="expected ')' after parameters")
+        self.expect("arrow", message="expected '->' after parameters")
+        return_type = self.peek()
+        if return_type is None or return_type.kind not in ("keyword", "identifier"):
+            error(return_type or self.end, "expected return type")
+        self.eat()
+        if self.peek() is not None:
+            error(self.peek(), "unexpected token after return type")
+        if self.next_line() is None:
+            error(self.end, "expected '{' after lambda declaration")
+        opening = self.expect("lbrace", message="expected '{' after lambda declaration")
+        if self.peek() is not None:
+            error(self.peek(), "expected '{' on its own line")
+        body = self.parse_block(fn_token, opening)
+        return LambdaNode(
+            fn_token.line, fn_token.column, name.text,
+            captures, params, return_type.text, body,
+        )
 
     def parse_function(self):
         fn_token = self.expect("keyword", "fn")
@@ -772,6 +886,8 @@ class Parser:
 
     def parse_statement(self):
         token = self.peek()
+        if token.kind == "keyword" and token.text == "fn":
+            return self.parse_lambda()
         if token.kind == "keyword" and token.text == "else":
             error(token, "'else' without an 'if'")
         if token.kind == "keyword" and token.text == "print":
@@ -783,6 +899,8 @@ class Parser:
             return self.parse_decl()
         if token.kind == "keyword" and token.text == "if":
             return self.parse_if()
+        if token.kind == "keyword" and token.text == "while":
+            return self.parse_while()
         if token.kind == "identifier":
             next_token = (
                 self.toks[self.pos + 1]
@@ -808,6 +926,24 @@ class Parser:
             value = self.parse_expr()
         self.expect("rparen", message="expected ')' after print argument")
         return PrintNode(token.line, token.column, value)
+
+    def parse_while(self):
+        while_token = self.expect("keyword", "while")
+        condition = self.parse_expr()
+        if self.peek() is not None:
+            error(self.peek(), "unexpected token after while condition")
+        if self.next_line() is None:
+            error(self.end, "expected '{' after while")
+        opening = self.expect("lbrace", message="expected '{' after while")
+        if self.peek() is not None:
+            error(self.peek(), "expected '{' on its own line")
+        body = self.parse_block(while_token, opening)
+        return WhileNode(
+            while_token.line,
+            while_token.column,
+            condition,
+            body,
+        )
 
     def parse_if(self):
         if_token = self.expect("keyword", "if")
@@ -1147,6 +1283,10 @@ class SemanticAnalyzer:
         self.current_function = None
         self.current_struct = None
         self.member_call_sites = []
+        self.generated_lambda_structs = []
+        self.lambda_counter = 0
+        self.current_lambda = None
+        self.lambda_outer_names = set()
 
     def is_valid_type(self, type_name):
         return type_name in ("i32", "i64", "bool") or type_name in self.structs
@@ -1179,7 +1319,29 @@ class SemanticAnalyzer:
             for field in self.current_struct.fields:
                 if field.name == name:
                     return field
+        if (
+            self.current_lambda is not None
+            and name in self.lambda_outer_names
+        ):
+            error(
+                node,
+                f"'{name}' is not captured by lambda "
+                f"'{self.current_lambda.name}': "
+                f"add it to the capture list, [{name}]",
+            )
         error(node, f"unknown variable or field '{name}'")
+
+    def find_visible_variable(self, name):
+        # Search local variables and parameters first.
+        for frame in reversed(self.scopes):
+            if name in frame:
+                return frame[name]
+        # Inside a member function, fields are also visible.
+        if self.current_struct is not None:
+            for field in self.current_struct.fields:
+                if field.name == name:
+                    return field
+        return None
 
     def visit_ProgramNode(self, node):
         for struct in node.structs:
@@ -1196,10 +1358,163 @@ class SemanticAnalyzer:
         self.resolve_member_mutations()
         for function in node.functions:
             self.visit(function)
+        checked_statements = []
         for statement in node.statements:
             self.visit(statement)
+            if isinstance(statement, LambdaNode):
+                checked_statements.append(statement.generated_decl)
+            else:
+                checked_statements.append(statement)
         self.visit(node.exit)
         self.validate_mutating_calls()
+        # Preserve the original AST until semantic analysis finishes.
+        node.statements = checked_statements
+        # Generated lambda structs must exist before CodeGen runs.
+        node.structs.extend(self.generated_lambda_structs)
+
+    def build_lambda_struct(self, node):
+        self.lambda_counter += 1
+        struct_name = f"lambda.{node.name}"
+        if struct_name in self.structs:
+            struct_name = f"lambda.{node.name}.{self.lambda_counter}"
+        fields = []
+        capture_field_map = {}
+        for capture in node.resolved_captures:
+            field = FieldDeclNode(
+                capture.line,
+                capture.column,
+                capture.name,
+                capture.type_name,
+                capture.mutable,
+            )
+            fields.append(field)
+            capture_field_map[id(capture)] = field
+        node.capture_field_map = capture_field_map
+        call_method = MemberFnNode(
+            node.line,
+            node.column,
+            "call",
+            node.params,
+            node.return_type,
+            node.body,
+        )
+        call_method.directly_mutating = False
+        call_method.called_members = set()
+        call_method.mutating = False
+        generated_struct = StructDeclNode(
+            node.line,
+            node.column,
+            struct_name,
+            fields,
+            [call_method],
+        )
+        generated_struct.is_lambda = True
+        node.generated_struct = generated_struct
+        # Register the synthetic struct as a known type.
+        self.structs[struct_name] = generated_struct
+        # Register its callable member function.
+        self.member_functions[struct_name] = {"call": call_method}
+        self.generated_lambda_structs.append(generated_struct)
+        initializers = [
+            VarNode(
+                capture.line,
+                capture.column,
+                capture.name,
+            )
+            for capture in node.resolved_captures
+        ]
+        generated_decl = DeclNode(
+            node.line,
+            node.column,
+            node.name,
+            struct_name,
+            False,
+            initializers,
+        )
+        generated_decl.is_generated_lambda_decl = True
+        node.generated_decl = generated_decl
+        return generated_struct
+
+    def rebind_lambda_captures(self, node, field_map):
+        if isinstance(node, VarNode):
+            if hasattr(node, "decl"):
+                replacement = field_map.get(id(node.decl))
+                if replacement is not None:
+                    node.decl = replacement
+            return
+        for child in node.children():
+            self.rebind_lambda_captures(child, field_map)
+
+    def visit_LambdaNode(self, node):
+        seen_captures = set()
+        captured_variables = []
+        for capture in node.captures:
+            if capture.name in seen_captures:
+                error(capture, f"'{capture.name}' is captured twice")
+            seen_captures.add(capture.name)
+            variable = self.find_visible_variable(capture.name)
+            if variable is None:
+                error(
+                    capture,
+                    f"cannot capture '{capture.name}': "
+                    f"no variable '{capture.name}' is visible here",
+                )
+            if not self.is_valid_type(variable.type_name):
+                error(capture, f"unknown capture type '{variable.type_name}'")
+            capture.type_name = variable.type_name
+            capture.source_decl = variable
+            captured_variables.append(capture)
+        seen_params = set()
+        for param in node.params:
+            if not self.is_valid_type(param.type_name):
+                error(param, f"unknown parameter type '{param.type_name}'")
+            if param.name in seen_captures:
+                error(param, f"parameter '{param.name}' conflicts with a capture")
+            if param.name in seen_params:
+                error(param, f"duplicate parameter '{param.name}'")
+            seen_params.add(param.name)
+        node.resolved_captures = captured_variables
+        old_scopes = self.scopes
+        old_function = self.current_function
+        old_struct = self.current_struct
+        old_lambda = self.current_lambda
+        old_outer_names = self.lambda_outer_names
+        outer_names = set()
+        for frame in self.scopes:
+            outer_names.update(frame.keys())
+        if self.current_struct is not None:
+            outer_names.update(
+                field.name for field in self.current_struct.fields
+            )
+        self.scopes = [{}]
+        self.current_function = node
+        self.current_struct = None
+        self.current_lambda = node
+        self.lambda_outer_names = outer_names
+        try:
+            # Captures become visible inside the lambda.
+            for capture in captured_variables:
+                capture.mutable = False
+                self.scopes[0][capture.name] = capture
+            # Parameters are also visible.
+            for param in node.params:
+                param.mutable = False
+                self.scopes[0][param.name] = param
+            self.visit(node.body)
+        finally:
+            self.scopes = old_scopes
+            self.current_function = old_function
+            self.current_struct = old_struct
+            self.current_lambda = old_lambda
+            self.lambda_outer_names = old_outer_names
+
+        self.build_lambda_struct(node)
+        self.rebind_lambda_captures(node.body, node.capture_field_map)
+        # Resolve capture initializers in the enclosing scope.
+        for initializer in node.generated_decl.inits:
+            self.visit(initializer)
+        # Make the lambda visible only after its body is checked.
+        self.visit_DeclNode(node.generated_decl)
 
     def visit_FunctionDeclNode(self, node):
         if node.body.exit is None:
@@ -1246,7 +1561,51 @@ class SemanticAnalyzer:
             self.scopes = old_scopes
             self.current_function = old_function
 
+    def reject_lambda_value(self, node, type_name, operation):
+        if type_name in self.structs:
+            struct = self.structs[type_name]
+            if getattr(struct, "is_lambda", False):
+                error(
+                    node,
+                    f"cannot {operation}: lambda values cannot "
+                    "be used here because their type has no name",
+                )
+
     def visit_CallNode(self, node):
+        variable = self.find_visible_variable(node.name)
+        member_function = None
+        if self.current_struct is not None:
+            member_function = self.member_functions.get(
+                self.current_struct.name, {}
+            ).get(node.name)
+        global_function = self.functions.get(node.name)
+        if variable is not None:
+            if member_function is not None or global_function is not None:
+                error(
+                    node,
+                    f"'{node.name}' is both a variable and a function: "
+                    "rename one of them",
+                )
+            variable_type = variable.type_name
+            if variable_type not in self.structs:
+                error(
+                    node,
+                    f"'{node.name}' is not callable: it is {variable_type}",
+                )
+            methods = self.member_functions.get(variable_type, {})
+            if "call" not in methods:
+                error(
+                    node,
+                    f"'{node.name}' is not callable: "
+                    f"{variable_type} has no member function 'call'",
+                )
+            base = VarNode(node.line, node.column, node.name)
+            node.callable_name = node.name
+            node.__class__ = MemberCallNode
+            node.base = base
+            node.name = "call"
+            return self.visit_MemberCallNode(node)
+
         function = None
         is_member_call = False
         if self.current_struct is not None:
@@ -1266,6 +1625,18 @@ class SemanticAnalyzer:
             )
         for arg, param in zip(node.args, function.params):
             arg_type = self.visit(arg)
+            if arg_type.startswith("lambda."):
+                lambda_name = (
+                    arg.name
+                    if isinstance(arg, VarNode)
+                    else arg_type.split(".")[1]
+                )
+                error(
+                    arg,
+                    f"'{lambda_name}' is a lambda and cannot be "
+                    f"passed to '{node.name}': its type has no name, "
+                    "so no parameter can have it",
+                )
             if arg_type != param.type_name:
                 if not (param.type_name == "i64" and arg_type == "i32"):
                     error(arg, f"expected {param.type_name}, got {arg_type}")
@@ -1340,19 +1711,58 @@ class SemanticAnalyzer:
             error(node, f"type '{base_type}' has no member functions")
         methods = self.member_functions.get(base_type, {})
         if node.name not in methods:
+            struct = self.structs[base_type]
+            field = next(
+                (f for f in struct.fields if f.name == node.name),
+                None,
+            )
+            if field is not None:
+                field_type = field.type_name
+                if field_type not in self.structs:
+                    error(
+                        node,
+                        f"'{node.name}' is not callable: it is {field_type}",
+                    )
+                field_methods = self.member_functions.get(field_type, {})
+                if "call" not in field_methods:
+                    error(
+                        node,
+                        f"'{node.name}' is not callable: "
+                        f"{field_type} has no member function 'call'",
+                    )
+                field_access = FieldAccessNode(
+                    node.line,
+                    node.column,
+                    node.base,
+                    node.name,
+                )
+                node.callable_name = node.name
+                node.base = field_access
+                node.name = "call"
+                return self.visit_MemberCallNode(node)
+
+        if node.name not in methods:
             error(node, f"struct '{base_type}' has no member function '{node.name}'")
         function = methods[node.name]
+        display_name = getattr(node, "callable_name", node.name)
         if len(node.args) != len(function.params):
+            expected = len(function.params)
+            actual = len(node.args)
             error(
                 node,
-                f"member function '{node.name}' expects "
-                f"{len(function.params)} arguments, got {len(node.args)}",
+                f"'{display_name}' expects {expected} "
+                f"argument{'s' if expected != 1 else ''}, "
+                f"got {actual}",
             )
         for arg, param in zip(node.args, function.params):
             arg_type = self.visit(arg)
             if arg_type != param.type_name:
                 if not (param.type_name == "i64" and arg_type == "i32"):
-                    error(arg, f"expected {param.type_name}, got {arg_type}")
+                    error(
+                        arg,
+                        f"'{display_name}' expects argument of type "
+                        f"{param.type_name}, got {arg_type}",
+                    )
         node.function = function
         node.struct_type = base_type
         self.member_call_sites.append(
@@ -1385,11 +1795,19 @@ class SemanticAnalyzer:
 
     def visit_BlockNode(self, node):
         self.scopes.append({})
-        for statement in node.statements:
-            self.visit(statement)
-        if node.exit is not None:
-            self.visit(node.exit)
-        self.scopes.pop()
+        try:
+            checked_statements = []
+            for statement in node.statements:
+                self.visit(statement)
+                if isinstance(statement, LambdaNode):
+                    checked_statements.append(statement.generated_decl)
+                else:
+                    checked_statements.append(statement)
+            if node.exit is not None:
+                self.visit(node.exit)
+            node.statements = checked_statements
+        finally:
+            self.scopes.pop()
 
     def check_initializer(self, node, expected_type):
         if isinstance(node, StructInitNode):
@@ -1431,6 +1849,12 @@ class SemanticAnalyzer:
                 self.check_initializer(node.inits[0], node.type_name)
             self.check_constant_range(node.inits[0], node.type_name)
             init_type = self.visit(node.inits[0])
+            if not getattr(node, "is_generated_lambda_decl", False):
+                self.reject_lambda_value(
+                    node.inits[0],
+                    init_type,
+                    "initialize a variable with a lambda",
+                )
             if init_type != node.type_name:
                 if not (node.type_name == "i64" and init_type == "i32"):
                     error(
@@ -1444,6 +1868,12 @@ class SemanticAnalyzer:
             struct = self.structs[node.type_name]
             if len(node.inits) == 1 and not isinstance(node.inits[0], StructInitNode):
                 init_type = self.visit(node.inits[0])
+                if not getattr(node, "is_generated_lambda_decl", False):
+                    self.reject_lambda_value(
+                        node.inits[0],
+                        init_type,
+                        "initialize a variable with a lambda",
+                    )
                 if init_type == node.type_name:
                     frame[node.name] = node
                     return
@@ -1501,9 +1931,28 @@ class SemanticAnalyzer:
             if isinstance(target, VarNode) and isinstance(target.decl, FieldDeclNode):
                 self.current_function.directly_mutating = True
         if not self.is_mutable_target(node.target):
+            target = node.target
+            if (
+                isinstance(target, VarNode)
+                and isinstance(
+                    getattr(target, "decl", None),
+                    CaptureNode,
+                )
+            ):
+                error(
+                    target,
+                    f"cannot assign to '{target.name}': "
+                    f"the capture '{target.name}' is const, "
+                    f"write [mut {target.name}]",
+                )
             error(node, "cannot assign to a constant variable or field")
         self.check_constant_range(node.value, target_type)
         value_type = self.visit(node.value)
+        self.reject_lambda_value(
+            node.value,
+            value_type,
+            "assign a lambda",
+        )
         if value_type != target_type:
             if not (target_type == "i64" and value_type == "i32"):
                 error(node, f"cannot assign {value_type} to {target_type}")
@@ -1521,6 +1970,11 @@ class SemanticAnalyzer:
         if isinstance(node.value, StringNode):
             return
         value_type = self.visit(node.value)
+        self.reject_lambda_value(
+            node.value,
+            value_type,
+            "print a lambda",
+        )
         if value_type not in ("i32", "i64", "bool") and value_type not in self.structs:
             error(node, f"cannot print value of type '{value_type}'")
 
@@ -1564,6 +2018,11 @@ class SemanticAnalyzer:
 
     def visit_ExitNode(self, node):
         result_type = self.visit(node.value)
+        self.reject_lambda_value(
+            node.value,
+            result_type,
+            "return a lambda",
+        )
         if self.current_function is not None:
             expected = self.current_function.return_type
             if result_type != expected:
@@ -1575,6 +2034,16 @@ class SemanticAnalyzer:
         elif result_type not in ("i32", "i64", "bool"):
             error(node, "top-level exit must return a built-in type")
         return result_type
+
+    def visit_WhileNode(self, node):
+        condition_type = self.visit(node.condition)
+        if condition_type != "bool":
+            error(
+                node.condition,
+                f"the condition of 'while' must be bool, "
+                f"got {condition_type}",
+            )
+        self.visit(node.body)
 
     def visit_IfNode(self, node):
         condition_type = self.visit(node.condition)
@@ -1913,8 +2382,19 @@ class CodeGen:
         return getattr(self, "visit_" + type(node).__name__)(node)
 
     def visit_ProgramNode(self, node):
+        # Register every struct type before defining its fields.
         for struct in node.structs:
-            self.visit(struct)
+            self.struct_types[struct.name] = (
+                self.module.context.get_identified_type(struct.name)
+            )
+            self.struct_defs[struct.name] = struct
+        # Define fields after every struct type is known.
+        for struct in node.structs:
+            field_types = [
+                self.llvm_type(field.type_name)
+                for field in struct.fields
+            ]
+            self.struct_types[struct.name].set_body(*field_types)
         for function in node.functions:
             self.register_function(function)
         for struct in node.structs:
@@ -2201,6 +2681,25 @@ class CodeGen:
         ):
             self.visit(node.exit)
 
+    def visit_WhileNode(self, node):
+        condition_block = self.function.append_basic_block("while.cond")
+        body_block = self.function.append_basic_block("while.body")
+        end_block = self.function.append_basic_block("while.end")
+        # Enter the loop.
+        self.builder.branch(condition_block)
+        # Evaluate condition on every iteration.
+        self.builder.position_at_end(condition_block)
+        condition = self.visit(node.condition)
+        self.builder.cbranch(condition, body_block, end_block)
+        # Execute loop body.
+        self.builder.position_at_end(body_block)
+        self.visit(node.body)
+        # Repeat unless the body already terminated.
+        if not self.builder.block.is_terminated:
+            self.builder.branch(condition_block)
+        # Continue after the loop.
+        self.builder.position_at_end(end_block)
+
     def visit_IfNode(self, node):
         condition = self.visit(node.condition)
         then_bb = self.function.append_basic_block("then")
@@ -2242,7 +2741,8 @@ def main():
     if len(sys.argv) != 3:
         print("usage: python3 compiler.py input.txt output.ll\n"
               "       python3 compiler.py --tokens input.txt\n"
-              "       python3 compiler.py --ast input.txt", file=sys.stderr)
+              "       python3 compiler.py --ast input.txt\n"
+              "       python3 compiler.py --ast-checked input.txt", file=sys.stderr)
         return 1
     try:
         if sys.argv[1] == "--tokens":
@@ -2253,6 +2753,12 @@ def main():
         elif sys.argv[1] == "--ast":
             lines = lex(Path(sys.argv[2]).read_bytes())
             print(Parser(lines).parse_program().dump())
+        elif sys.argv[1] == "--ast-checked":
+            lines = lex(Path(sys.argv[2]).read_bytes())
+            program = Parser(lines).parse_program()
+            analyzer = SemanticAnalyzer()
+            analyzer.visit(program)
+            print(program.dump())
         else:
             lines = lex(Path(sys.argv[1]).read_bytes())
             module = compile_tokens(lines)

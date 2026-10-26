@@ -1,4 +1,5 @@
 import shutil
+import re
 import subprocess
 import sys
 import tempfile
@@ -20,22 +21,26 @@ def main():
     for folder in ("ok", "err"):
         for source in sorted((ROOT / "tests" / folder).glob("*.txt")):
             label = source.relative_to(ROOT)
-            expected_file = source.with_suffix(".expected")
+            expected_file = source.with_suffix(".out" if folder == "ok" else ".expected")
             if not expected_file.exists():
                 print(f"MISSING EXPECTED: {label}")
                 failed += 1
                 continue
             expected = expected_file.read_text()
             input_file = source.with_suffix(".in")
-            with tempfile.TemporaryDirectory(prefix="practice7_test_") as directory:
+            with tempfile.TemporaryDirectory(prefix="compiler_test_") as directory:
                 output_file = Path(directory) / "output.ll"
                 result = subprocess.run(
                     [sys.executable, str(COMPILER), str(source), str(output_file)],
-                    capture_output=True, text=True,
+                    capture_output=True, text=True, cwd=ROOT,
                 )
                 actual = result.stderr
                 if folder == "err":
-                    success = result.returncode != 0 and actual == expected
+                    success = (
+                        result.returncode != 0
+                        and re.search(r"compilation error: line \d+:\d+:", actual) is not None
+                        and actual == expected
+                    )
                 else:
                     success = False
                     if result.returncode == 0:
