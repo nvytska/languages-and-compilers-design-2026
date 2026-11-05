@@ -1,0 +1,20 @@
+struct Point
+{
+    i32 mut x
+    i32 mut y
+
+    fn moved := (i32 dx) -> Point
+    {
+        Point q{x + dx, y}
+        exit q
+    }
+}
+
+fn origin := () -> Point
+{
+    Point p{0, 0}
+    exit p
+}
+
+i32 result{origin().moved(7).x}
+exit result

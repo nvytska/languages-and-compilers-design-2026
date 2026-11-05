@@ -1,0 +1,4 @@
+print("Hello world")
+print("Result: 25")
+print("")
+exit 0

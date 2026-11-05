@@ -1,0 +1,24 @@
+struct Point
+{
+    i32 x
+
+    fn getValue := () -> i32
+    {
+        exit x
+    }
+
+    fn calculate := () -> i32
+    {
+        i32 result{getValue() + 10}
+        exit result
+    }
+}
+
+fn getValue := () -> i32
+{
+    exit 100
+}
+
+Point p{5}
+i32 result{p.calculate()}
+exit result

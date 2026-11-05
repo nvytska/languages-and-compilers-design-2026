@@ -1,0 +1,6 @@
+fn check := (i32 x) -> bool
+{
+    i32 result{x + 5}
+    exit result
+}
+exit check(10)

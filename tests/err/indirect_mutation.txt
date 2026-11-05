@@ -1,0 +1,19 @@
+struct Counter
+{
+    i32 mut value
+
+    fn increase := () -> i32
+    {
+        value := value + 1
+        exit value
+    }
+
+    fn twice := () -> i32
+    {
+        i32 first{increase()}
+        exit increase()
+    }
+}
+
+Counter c{0}
+exit c.twice()

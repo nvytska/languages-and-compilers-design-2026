@@ -1,0 +1,5 @@
+fn identity := (i64 value) -> i64
+{
+    exit value
+}
+exit identity(42)

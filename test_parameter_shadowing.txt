@@ -1,0 +1,13 @@
+struct Point
+{
+    i32 x
+
+    fn calculate := (i32 x) -> i32
+    {
+        i32 result{x + 10}
+        exit result
+    }
+}
+Point p{100}
+i32 result{p.calculate(5)}
+exit result

@@ -1,0 +1,23 @@
+fn direct := () -> i32
+{
+    if false
+    {
+        exit direct()
+    }
+    exit 1
+}
+fn first := () -> i32
+{
+    if false
+    {
+        exit second()
+    }
+    exit 2
+}
+fn second := () -> i32
+{
+    exit first()
+}
+i32 a{direct()}
+i32 b{second()}
+exit 0

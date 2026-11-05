@@ -1,0 +1,2 @@
+i32 x{print(5)}
+exit x

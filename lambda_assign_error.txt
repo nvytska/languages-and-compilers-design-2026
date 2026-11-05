@@ -1,0 +1,14 @@
+struct Holder
+{
+    i32 x
+}
+
+fn square := [](i32 x) -> i32
+{
+    i32 r{x * x}
+    exit r
+}
+
+Holder mut h{5}
+h := square
+exit 0

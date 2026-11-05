@@ -1,0 +1,6 @@
+i32 a{25}
+i64 b{6000000000}
+print(a)
+print(b)
+print(a + 5)
+exit 0

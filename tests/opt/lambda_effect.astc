@@ -1,0 +1,26 @@
+Program
+  Struct lambda.loud
+    Field captured i32 const
+    MemberFn call -> i32
+      Block
+        Print
+          Var captured
+        Exit
+          Var captured
+  Struct lambda.quiet
+    Field captured i32 const
+    MemberFn call -> i32
+      Block
+        Exit
+          Var captured
+  Decl captured i32 const
+    Const 5
+  Decl loud lambda.loud const
+    Var captured
+  Decl quiet lambda.quiet const
+    Var captured
+  Decl effect i32 const
+    CallableCall loud
+      Var loud
+  Exit
+    Const 0

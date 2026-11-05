@@ -1,0 +1,13 @@
+struct Point
+{
+    i32 mut x
+    i32 mut y
+}
+fn copyPoint := (Point p) -> Point
+{
+    Point result{p}
+    exit result
+}
+Point original{10, 20}
+Point copied{copyPoint(original)}
+exit 0

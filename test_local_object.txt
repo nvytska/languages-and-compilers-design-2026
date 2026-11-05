@@ -1,0 +1,18 @@
+struct Point
+{
+    i32 mut x
+
+    fn shift := (i32 dx) -> i32
+    {
+        x := x + dx
+        exit x
+    }
+
+    fn calculate := () -> i32
+    {
+        Point mut temp{10}
+        exit temp.shift(5)
+    }
+}
+Point p{3}
+exit p.calculate()

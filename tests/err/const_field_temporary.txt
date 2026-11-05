@@ -1,0 +1,25 @@
+struct Point
+{
+    i32 mut x
+
+    fn shift := (i32 dx) -> i32
+    {
+        x := x + dx
+        exit x
+    }
+}
+
+struct Circle
+{
+    Point center
+
+    fn copy := () -> Circle
+    {
+        Circle result{center}
+        exit result
+    }
+}
+
+Point p{3}
+Circle c{p}
+exit c.copy().center.shift(2)

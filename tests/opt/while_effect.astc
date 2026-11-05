@@ -1,0 +1,12 @@
+Program
+  Function loop -> i32
+    Block
+      While
+        Bool false
+        Block
+      Exit
+        Const 1
+  Decl result i32 const
+    Call loop
+  Exit
+    Const 0

@@ -1,0 +1,14 @@
+fn square := (i32 x) -> i32
+{
+    i32 r{x * x}
+    exit r
+}
+
+fn calculate := [](i32 y) -> i32
+{
+    i32 result{square(y)}
+    exit result
+}
+
+print(calculate(7))
+exit 0

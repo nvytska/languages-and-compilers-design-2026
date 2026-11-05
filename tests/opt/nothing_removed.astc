@@ -1,0 +1,17 @@
+Program
+  Function double -> i32
+    Param a i32
+    Block
+      Decl result i32 const
+        BinOp +
+          Var a
+          Var a
+      Exit
+        Var result
+  Decl x i32 const
+    Const 5
+  Decl y i32 const
+    Call double
+      Var x
+  Exit
+    Var y

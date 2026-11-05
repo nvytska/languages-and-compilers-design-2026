@@ -1,0 +1,13 @@
+i32 captured{5}
+fn loud := [captured]() -> i32
+{
+    print(captured)
+    exit captured
+}
+fn quiet := [captured]() -> i32
+{
+    exit captured
+}
+i32 effect{loud()}
+i32 unused{quiet()}
+exit 0

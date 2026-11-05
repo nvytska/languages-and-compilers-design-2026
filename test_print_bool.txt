@@ -1,0 +1,7 @@
+bool a{true}
+bool b{false}
+print(a)
+print(b)
+print(5 == 5)
+print(5 != 5)
+exit 0

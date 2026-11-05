@@ -1,0 +1,28 @@
+Program
+  Function loud -> i32
+    Block
+      Print
+        Const 7
+      Exit
+        Const 7
+  Function relay -> i32
+    Block
+      Exit
+        Call loud
+  Function wrapper -> i32
+    Block
+      Exit
+        Call relay
+  Function identity -> i32
+    Param a i32
+    Block
+      Exit
+        Var a
+  Decl result i32 mut
+    Const 0
+  Assign
+    Var result
+    Call identity
+      Call wrapper
+  Exit
+    Const 0

@@ -1,0 +1,7 @@
+fn square := [](i32 x) -> i32
+{
+    i32 r{x * x}
+    exit r
+}
+
+exit square(5)

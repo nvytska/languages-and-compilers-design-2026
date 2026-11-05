@@ -11,7 +11,8 @@ Program
     BinOp +
       Var x
       Const 10
-  Assign t
+  Assign
+    Var t
     BinOp *
       Var t
       Var z

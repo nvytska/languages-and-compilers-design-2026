@@ -1,84 +1,46 @@
-Practice 5 — AI Usage
+AI Usage Report — Practice 9
 
-Tool used:
-ChatGPT https://chatgpt.com/share/6ac3fff0-9ee0-83eb-926c-e531f3bca410
+**AI Tool:** ChatGPT (OpenAI)
 
-How AI was used:
-- Reviewed the Practice 5 specification and helped break the work into incremental steps.
-- Helped update the lexer to support:
-  - `if`
-  - `else`
-  - standalone `!`
-  - braces as normal tokens instead of matching them inside the lexer.
-- Helped extend the AST with:
-  - `IfNode`
-  - `BlockNode`
-  - `NotNode`
-  - `BoolNode`
-  - declaration type information.
-- Helped redesign the parser to support multi-line statements using a line cursor.
-- Helped implement parsing for:
-  - `if`
-  - optional `else`
-  - nested blocks
-  - `exit` inside blocks
-  - unary `!`
-  - boolean constants
-  - `==` and `!=`.
-- Helped implement a separate semantic-analysis pass with a stack of scope frames.
-- Helped implement:
-  - block scoping
-  - shadowing
-  - same-scope redeclaration checks
-  - variable resolution through `node.decl`
-  - use-after-scope errors
-  - bool-only `if` conditions
-  - bool-only `!`
-  - assignment type checking
-  - declaration type checking
-  - i32-to-i64 widening.
-- Helped update LLVM code generation to support:
-  - `i32`, `i64`, and `bool`
-  - entry-block `alloca`
-  - declaration-based slot lookup instead of name-based lookup
-  - `then`, `else`, and `merge` basic blocks
-  - conditional branches
-  - nested `if`
-  - `exit` inside a branch
-  - protection against multiple terminators
-  - boolean negation
-  - integer comparisons
-  - boolean output as `true` / `false`.
-- Helped verify SSA promotion using:
-  `opt -passes=mem2reg -S`
-  and confirmed the generated phi node:
-  `%r.0 = phi i32 [ 1, %then ], [ 2, %else ]`
-- Helped create the required Practice 5 `tests/ok` and `tests/err` cases.
-- Helped identify regressions from previous practices and restore compatibility for:
-  - bool arithmetic error messages
-  - i64 integer literals
-  - i64 overflow detection
-  - narrowing initialization
-  - narrowing assignment
-  - parser error wording.
+**Purpose:** Used ChatGPT as a step-by-step coding assistant to understand and implement AST-level optimization, including unused variable removal, unused function removal, side-effect analysis, and testing.
 
-Example prompts used:
-- “lets do this practice step by step”
-- “lets move on”
-- Shared compiler output and asked for the next implementation step.
-- Shared compiler errors and test failures for debugging.
+**Exact prompts used:**
 
-What was taken as-is:
-- Some suggested AST node structures.
-- The general scope-stack design.
-- The general LLVM `then` / `else` / `merge` structure.
-- Some test-case templates.
+1. "давай робити це покроково"
+2. "Внутрішню x{10}. Перевір мою відповідь і перейдемо до кроку 2."
+3. "давай далі але не треба переробляти і надсилати мені компілятор я сама буду"
+4. "Моя відповідь: 1. Перевір і продовжимо UseCounter з обробкою side effects та assignments."
+5. "Моя відповідь: x та z. Перевір і перейдемо до реалізації Pruner."
+6. "ok done я готова робити настуаний крок"
+7. "Моя відповідь: обидві залишаться. Перевір, а потім перейдемо до Task 3: tests/opt, regression tests та README."
+8. "20 тестів проходить"
+9. "6 tests + all old"
+10. "ok done"
+11. "ок давай фіналізуємо вже бонусне"
 
-What was changed or adapted manually:
-- Integrated all suggested changes into the existing `compiler.py` structure.
-- Adjusted code to preserve compatibility with previous Practice 3 and Practice 4 tests.
-- Ran all commands and tests manually.
-- Fixed implementation details based on actual compiler output and test results.
-- Kept the existing repository layout with `compiler.py` in the project root instead of moving it to `src/`.
+**What I used from AI suggestions:**
 
-AI did not independently submit or run the assignment. All generated suggestions were reviewed, integrated, and tested manually.
+- Guidance on implementing the `--remove-unused` command-line flag.
+- `UseCounter` visitor for counting variable reads by declaration identity (`id(decl)`).
+- `has_call_or_read()` for identifying initializers with possible side effects.
+- `Pruner` for removing unused declarations and their assignments from the AST.
+- Fixed-point iteration in `remove_unused()` to repeatedly remove newly unused declarations and functions.
+- Function call counting for removing unused global functions.
+- `EffectAnalyzer` for detecting direct and indirect observable effects.
+- Call graph analysis, recursion detection, and fixed-point effect propagation.
+- `has_observable_effect()` for distinguishing pure function calls from effectful calls.
+- Suggestions for optimization tests, regression tests, and the README memory-management explanation.
+
+**What I changed or implemented myself:**
+
+I integrated the suggested code into my existing compiler rather than replacing the compiler with an AI-generated implementation. I adapted the optimization logic to the existing AST classes, semantic analyzer, and LLVM code generation pipeline.
+
+I manually edited the compiler, created the test files, and ran the tests locally. I also worked through the examples to understand declaration identity, variable shadowing, assignment handling, fixed-point iteration, and side effects.
+
+**Testing:**
+
+I reported that six new optimization tests and all previously existing tests passed. The final bonus implementation and its complete regression results were not independently verified by ChatGPT.
+
+**Summary:**
+
+ChatGPT provided explanations, implementation examples, algorithm suggestions, and testing guidance. I was responsible for integrating the code, running the compiler, checking the results, and maintaining the final implementation.
