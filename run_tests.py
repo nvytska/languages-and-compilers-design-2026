@@ -1,3 +1,4 @@
+import os
 import shutil
 import re
 import subprocess
@@ -11,6 +12,7 @@ COMPILER = ROOT / "compiler.py"
 
 
 def main():
+    flags = ["--remove-unused"] if os.getenv("REMOVE_UNUSED") == "1" else []
     runner = shutil.which("lli") or shutil.which("clang")
     if runner is None:
         print("Install lli or clang to execute the valid tests.", file=sys.stderr)
@@ -18,7 +20,7 @@ def main():
 
     passed = 0
     failed = 0
-    for folder in ("ok", "err"):
+    for folder in ("ok", "err", "opt"):
         for source in sorted((ROOT / "tests" / folder).glob("*.txt")):
             label = source.relative_to(ROOT)
             expected_file = source.with_suffix(".out" if folder == "ok" else ".expected")
@@ -27,11 +29,27 @@ def main():
                 failed += 1
                 continue
             expected = expected_file.read_text()
+            if folder == "opt":
+                ast_file = source.with_suffix(".astc")
+                if not ast_file.exists():
+                    print(f"MISSING EXPECTED: {ast_file.relative_to(ROOT)}")
+                    failed += 1
+                    continue
+                ast = subprocess.run(
+                    [sys.executable, str(COMPILER), "--remove-unused", "--ast-checked", str(source)],
+                    capture_output=True, text=True, cwd=ROOT,
+                )
+                if ast.returncode != 0 or ast.stdout != ast_file.read_text():
+                    print(f"FAIL {label}: optimized AST")
+                    print(f"  Expected: {ast_file.read_text()!r}")
+                    print(f"  Actual:   {(ast.stderr if ast.returncode else ast.stdout)!r}")
+                    failed += 1
+                    continue
             input_file = source.with_suffix(".in")
             with tempfile.TemporaryDirectory(prefix="compiler_test_") as directory:
                 output_file = Path(directory) / "output.ll"
                 result = subprocess.run(
-                    [sys.executable, str(COMPILER), str(source), str(output_file)],
+                    [sys.executable, str(COMPILER), *flags, str(source), str(output_file)],
                     capture_output=True, text=True, cwd=ROOT,
                 )
                 actual = result.stderr

@@ -1,0 +1,11 @@
+Program
+  Decl result i32 mut
+    Const 0
+  If
+    Bool true
+    Block
+      Assign
+        Var result
+        Const 10
+  Exit
+    Var result

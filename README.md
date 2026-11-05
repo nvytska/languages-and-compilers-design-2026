@@ -84,6 +84,59 @@ Each program in `tests/valid/` and `tests/invalid/` has a neighbouring
 clang, compare exact error messages and AST dumps, and check output-file
 preservation. Lexer tests check token kinds and positions.
 
+## Optimizations
+
+`--remove-unused` enables an AST pass after semantic analysis and before LLVM
+IR generation. It removes unused variable declarations, assignments to those
+variables (including field assignments), and uncalled global functions. Uses
+are counted per declaration, so shadowed names remain separate. Parameters,
+fields, member functions, and lambda declarations are preserved. An unused
+result of a pure call can be removed, including a pure method or lambda call.
+An initializer or assignment value keeps its target if evaluating it can
+have observable effects, including effects in call arguments or receivers.
+
+Effect analysis marks functions that print, read input, mutate their receiver,
+contain a loop, or participate in recursion. It propagates these effects from
+callees to callers. The pass rebuilds the call graph after pruning, so a pure
+function can be removed once its last call disappears.
+
+The pass repeats counting and pruning until nothing is removed: dropping a
+declaration or function may remove the last use of another one.
+`--remove-unused --ast-checked` shows the optimized tree; `--ast` shows the
+original parse tree. Without the flag compilation behaves as before.
+
+Limitations: a self-feeding variable such as `k := k + 1` survives because its
+right-hand side reads it. Mutually recursive global functions can survive even
+when main calls neither: counting calls does not establish reachability.
+
+Memory management: the compiler is written in Python and was tested with
+CPython, which uses reference counting plus a cyclic garbage collector. A
+removed subtree can be reclaimed when no strong references remain. AST nodes
+have no general parent pointer. Semantic links such as `VarNode.decl` and
+`CallNode.function` can retain declarations after they are unlinked; recursive
+function links can form cycles. Strong parent pointers would add references
+and create parent-child cycles, requiring cyclic collection after unlinking.
+This concerns the compiler's memory, not heap deallocation in the compiled program.
+
+Memory experiment: on `i32 x{10}\nexit 0`, a `weakref.ref` to the checked
+declaration returned `None` after `remove_unused(program)` and `gc.collect()`:
+`reference() is None` was **True**. No extra strong reference to the declaration
+was retained. This experiment is also checked by
+`PrunerTests.test_removed_declaration_is_collected` in `tests/test_pruner.py`.
+
+Run regression tests in both modes with the virtual environment active:
+
+```sh
+python3 run_tests.py
+REMOVE_UNUSED=1 python3 run_tests.py
+```
+
+The runner checks all programs in `tests/ok`, `tests/err`, and `tests/opt`.
+Each of the twelve optimization examples has a `.txt` source, a reviewed `.astc`
+optimized AST, and a `.expected` runtime output. Both runs check the optimized
+AST snapshots; runtime compilation follows `REMOVE_UNUSED`. Success in both
+modes verifies the same outputs and error messages with and without the pass.
+
 ## History and submission
 
 The existing published initial commit contained only the README. The next commit

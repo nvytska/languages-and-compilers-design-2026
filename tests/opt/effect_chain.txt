@@ -1,0 +1,20 @@
+fn loud := () -> i32
+{
+    print(7)
+    exit 7
+}
+fn relay := () -> i32
+{
+    exit loud()
+}
+fn wrapper := () -> i32
+{
+    exit relay()
+}
+fn identity := (i32 a) -> i32
+{
+    exit a
+}
+i32 mut result{0}
+result := identity(wrapper())
+exit 0

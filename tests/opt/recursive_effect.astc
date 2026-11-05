@@ -1,0 +1,29 @@
+Program
+  Function direct -> i32
+    Block
+      If
+        Bool false
+        Block
+          Exit
+            Call direct
+      Exit
+        Const 1
+  Function first -> i32
+    Block
+      If
+        Bool false
+        Block
+          Exit
+            Call second
+      Exit
+        Const 2
+  Function second -> i32
+    Block
+      Exit
+        Call first
+  Decl a i32 const
+    Call direct
+  Decl b i32 const
+    Call second
+  Exit
+    Const 0

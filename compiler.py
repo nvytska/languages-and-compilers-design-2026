@@ -2729,41 +2729,223 @@ class CodeGen:
         self.builder.position_at_end(merge_bb)
 
 
-def compile_tokens(lines):
+def has_observable_effect(node, effects):
+    if isinstance(node, ReadNode):
+        return True
+    if isinstance(node, (CallNode, MemberCallNode)):
+        function = getattr(node, "function", None)
+        if effects is None or function is None or id(function) in effects:
+            return True
+    return any(has_observable_effect(child, effects) for child in node.children())
+
+
+class EffectAnalyzer:
+    """Find observable effects on the checked AST and propagate them to callers."""
+
+    def __init__(self):
+        self.effects = set()
+
+    def has_direct_effect(self, node):
+        if isinstance(node, (PrintNode, ReadNode, WhileNode)):
+            return True
+        if isinstance(node, (CallNode, MemberCallNode)):
+            function = getattr(node, "function", None)
+            if function is None or getattr(function, "mutating", False):
+                return True
+        return any(self.has_direct_effect(child) for child in node.children())
+
+    def collect_calls(self, node):
+        calls = set()
+        if isinstance(node, (CallNode, MemberCallNode)):
+            function = getattr(node, "function", None)
+            if function is not None:
+                calls.add(id(function))
+        for child in node.children():
+            calls.update(self.collect_calls(child))
+        return calls
+
+    def recursive_functions(self, graph):
+        recursive = set()
+        for start in graph:
+            visited = {start}
+            pending = list(graph[start])
+            while pending:
+                callee = pending.pop()
+                if callee == start:
+                    recursive.add(start)
+                    break
+                if callee not in visited:
+                    visited.add(callee)
+                    pending.extend(graph.get(callee, ()))
+        return recursive
+
+    def analyze(self, program):
+        functions = list(program.functions)
+        for struct in program.structs:
+            functions.extend(struct.member_functions)
+
+        graph = {}
+        self.effects = set()
+        for function in functions:
+            function_id = id(function)
+            graph[function_id] = self.collect_calls(function.body)
+            if getattr(function, "mutating", False) or self.has_direct_effect(function.body):
+                self.effects.add(function_id)
+
+        self.effects.update(self.recursive_functions(graph))
+        while True:
+            callers = {
+                caller for caller, callees in graph.items()
+                if caller not in self.effects and not self.effects.isdisjoint(callees)
+            }
+            if not callers:
+                return self.effects
+            self.effects.update(callers)
+
+
+class UseCounter:
+    """Count variable reads and global calls by declaration identity.
+
+    A protective use also keeps a variable whose initializer or assignment
+    value may have effects. Assignment targets themselves are not reads.
+    """
+
+    def __init__(self, effects=None):
+        self.reads = {}
+        self.calls = {}
+        self.effects = effects
+
+    def read(self, decl):
+        if not isinstance(decl, DeclNode):
+            return
+        key = id(decl)
+        self.reads[key] = self.reads.get(key, 0) + 1
+
+    def visit(self, node):
+        visitor = getattr(self, "visit_" + type(node).__name__, self.visit_children)
+        visitor(node)
+
+    def visit_children(self, node):
+        for child in node.children():
+            self.visit(child)
+
+    def visit_FunctionDeclNode(self, node):
+        self.calls.setdefault(id(node), 0)
+        self.visit(node.body)
+
+    def visit_CallNode(self, node):
+        function = getattr(node, "function", None)
+        if isinstance(function, FunctionDeclNode):
+            key = id(function)
+            self.calls[key] = self.calls.get(key, 0) + 1
+        self.visit_children(node)
+
+    def visit_DeclNode(self, node):
+        self.reads.setdefault(id(node), 0)
+        if (getattr(node, "is_generated_lambda_decl", False)
+                or any(has_observable_effect(init, self.effects) for init in node.inits)):
+            self.read(node)
+        self.visit_children(node)
+
+    def visit_VarNode(self, node):
+        self.read(node.decl)
+
+    def visit_AssignNode(self, node):
+        target = node.target
+        while isinstance(target, FieldAccessNode):
+            target = target.base
+        if isinstance(target, VarNode):
+            if has_observable_effect(node.value, self.effects):
+                self.read(target.decl)
+        else:
+            # A temporary receiver such as make().x still evaluates its call.
+            self.visit(node.target)
+        self.visit(node.value)
+
+
+class Pruner:
+    """Remove dead variables, their writes, and uncalled global functions."""
+
+    def __init__(self, dead_variables, dead_functions=()):
+        self.dead = dead_variables
+        self.dead_functions = dead_functions
+
+    def is_dead(self, node):
+        if isinstance(node, DeclNode):
+            return id(node) in self.dead
+        if isinstance(node, AssignNode):
+            target = node.target
+            while isinstance(target, FieldAccessNode):
+                target = target.base
+            return (isinstance(target, VarNode)
+                    and isinstance(target.decl, DeclNode)
+                    and id(target.decl) in self.dead)
+        return False
+
+    def prune(self, node):
+        if isinstance(node, ProgramNode):
+            node.functions = [fn for fn in node.functions if id(fn) not in self.dead_functions]
+        if isinstance(node, (ProgramNode, BlockNode)):
+            node.statements = [stmt for stmt in node.statements if not self.is_dead(stmt)]
+        for child in node.children():
+            self.prune(child)
+
+
+def remove_unused(program):
+    """Repeat counting and pruning until no unused variables or globals remain."""
+    analyzer = EffectAnalyzer()
+    while True:
+        counter = UseCounter(analyzer.analyze(program))
+        counter.visit(program)
+        dead_variables = {key for key, reads in counter.reads.items() if reads == 0}
+        dead_functions = {key for key, calls in counter.calls.items() if calls == 0}
+        if not dead_variables and not dead_functions:
+            return program
+        Pruner(dead_variables, dead_functions).prune(program)
+
+
+def compile_tokens(lines, remove_unused_enabled=False):
     program = Parser(lines).parse_program()
     SemanticAnalyzer().visit(program)
+    if remove_unused_enabled:
+        program = remove_unused(program)
     return CodeGen().visit(program)
 
 
 def main():
     from pathlib import Path
 
-    if len(sys.argv) != 3:
-        print("usage: python3 compiler.py input.txt output.ll\n"
+    args = sys.argv[1:]
+    remove_unused_enabled = "--remove-unused" in args
+    args = [arg for arg in args if arg != "--remove-unused"]
+    if len(args) != 2:
+        print("usage: python3 compiler.py [--remove-unused] input.txt output.ll\n"
               "       python3 compiler.py --tokens input.txt\n"
               "       python3 compiler.py --ast input.txt\n"
-              "       python3 compiler.py --ast-checked input.txt", file=sys.stderr)
+              "       python3 compiler.py [--remove-unused] --ast-checked input.txt", file=sys.stderr)
         return 1
     try:
-        if sys.argv[1] == "--tokens":
-            lines = lex(Path(sys.argv[2]).read_bytes())
+        if args[0] == "--tokens":
+            lines = lex(Path(args[1]).read_bytes())
             for tokens in lines:
                 for token in tokens:
                     print(token)
-        elif sys.argv[1] == "--ast":
-            lines = lex(Path(sys.argv[2]).read_bytes())
+        elif args[0] == "--ast":
+            lines = lex(Path(args[1]).read_bytes())
             print(Parser(lines).parse_program().dump())
-        elif sys.argv[1] == "--ast-checked":
-            lines = lex(Path(sys.argv[2]).read_bytes())
+        elif args[0] == "--ast-checked":
+            lines = lex(Path(args[1]).read_bytes())
             program = Parser(lines).parse_program()
             analyzer = SemanticAnalyzer()
             analyzer.visit(program)
+            if remove_unused_enabled:
+                program = remove_unused(program)
             print(program.dump())
         else:
-            lines = lex(Path(sys.argv[1]).read_bytes())
-            module = compile_tokens(lines)
+            lines = lex(Path(args[0]).read_bytes())
+            module = compile_tokens(lines, remove_unused_enabled)
             # No output file is opened until every source check has succeeded.
-            Path(sys.argv[2]).write_text(str(module))
+            Path(args[1]).write_text(str(module))
     except CompileError as exception:
         print(f"compilation error: {exception}", file=sys.stderr)
         return 1
